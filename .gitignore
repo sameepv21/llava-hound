@@ -45,3 +45,8 @@ output
 cc3m
 checkpoints
 ckpts*
+
+*.ipynb
+
+sol
+sol_output

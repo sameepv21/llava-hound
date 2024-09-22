@@ -1,8 +1,8 @@
-input_model_name=${1:-"ShareGPTVideo/LLaVA-Hound-SFT"}
-output_model_name=${2:-"$SAVE_DIR/test/Video-LLaVA-DPO"}
+input_model_name=${1:-"lmms-lab/LLaVA-NeXT-Video-7B"}
+output_model_name=${2:-"/scratch/svani/experiments/llava-hound-experiments"}
 lr=${3:-"5e-7"}
 
-cache_dir=$CACHE_DIR
+cache_dir="/scratch/svani/.cache"
 export cache_dir=$cache_dir
 
 # export WANDB_MODE=disabled
@@ -10,7 +10,7 @@ export WANDB_PROJECT=llava-hound
 export WANDB_NAME=dpo
 
 # gpu_ids=0
-gpu_ids=0,1,2,3,4,5,6,7
+gpu_ids=0
 export CUDA_VISIBLE_DEVICES=$gpu_ids
 n_gpu=$(echo $gpu_ids | tr "," "\n" | wc -l)
 echo "Using $n_gpu GPUs: $gpu_ids"
@@ -20,7 +20,7 @@ output_dir=$output_model_name
 mkdir -p $output_dir
 
 # DATA
-data_path=$DATA_DIR/video_instruction/train/dpo/sft_dpo_17k.jsonl
+data_path=/scratch/svani/data/llava-hound/train/video_instruction/train/dpo/sft_dpo_17k.jsonl
 
 video_dir=$TRAIN_VIDEO_DIR
 image_dir="/"
@@ -31,7 +31,7 @@ rand=$RANDOM
 port=$((19000 + $rand % 1000))
 
 torchrun --nproc_per_node=$n_gpu --master_port=$port dpo_scripts/run_dpo.py \
-    --deepspeed config/zero2.json \
+    --deepspeed ./zero2.json \
     --model_name_or_path $model_name_or_path \
     --dpo_alpha 1.0 --beta 0.1 --gamma 0 \
     --version v1 \
