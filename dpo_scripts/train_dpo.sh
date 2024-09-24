@@ -22,16 +22,17 @@ mkdir -p $output_dir
 # DATA
 data_path=/scratch/svani/data/llava-hound/train/video_instruction/train/dpo/sft_dpo_17k.jsonl
 
-video_dir=$TRAIN_VIDEO_DIR
+video_dir=/scratch/svani/data/llava-hound/train
 image_dir="/"
 
 # sudo chmod +x -R .
-export PYTHONPATH=.
+export PYTHONPATH="/home/svani/.conda/envs/llava-hound/bin/python"
 rand=$RANDOM
 port=$((19000 + $rand % 1000))
 
-torchrun --nproc_per_node=$n_gpu --master_port=$port dpo_scripts/run_dpo.py \
-    --deepspeed ./zero2.json \
+# torchrun --nproc_per_node=$n_gpu --master_port=$port dpo_scripts/run_dpo.py \
+python -m dpo_scripts.run_dpo \
+    --deepspeed /home/svani/Video-LLMs/LLaVA-Hound/zero2.json \
     --model_name_or_path $model_name_or_path \
     --dpo_alpha 1.0 --beta 0.1 --gamma 0 \
     --version v1 \
@@ -39,8 +40,8 @@ torchrun --nproc_per_node=$n_gpu --master_port=$port dpo_scripts/run_dpo.py \
     --video_folder $video_dir \
     --image_folder $image_dir \
     --X "Image" "Video" --training_modal 'video' \
-    --image_tower LanguageBind/LanguageBind_Image \
-    --video_tower LanguageBind/LanguageBind_Video_merge \
+    --image_tower openai/clip-vit-large-patch14-336 \
+    --video_tower openai/clip-vit-large-patch14-336 \
     --mm_projector_type mlp2x_gelu \
     --mm_vision_select_layer -2 \
     --mm_use_x_start_end False \
@@ -67,4 +68,4 @@ torchrun --nproc_per_node=$n_gpu --master_port=$port dpo_scripts/run_dpo.py \
     --gradient_checkpointing True \
     --lazy_preprocess True \
     --cache_dir $cache_dir \
-    --report_to wandb 2>&1 | tee $output_dir/train.log
+    --report_to wandb 2>&1 | tee ./train.log
