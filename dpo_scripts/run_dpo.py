@@ -34,7 +34,6 @@ IS_TOKENIZER_GREATER_THAN_0_14 = version.parse(tokenizers.__version__) >= versio
 from llava.constants import IGNORE_INDEX, X_TOKEN_INDEX, DEFAULT_X_TOKEN, DEFAULT_X_START_TOKEN, DEFAULT_X_END_TOKEN
 from torch.utils.data import Dataset
 from llava.train.llava_trainer import LLaVADPOTrainer
-from data_processing.utils import load_jsonl, load_json
 
 from llava import conversation as conversation_lib
 conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
@@ -410,6 +409,18 @@ def preprocess(
         return preprocess_v1(sources, tokenizer, X=X)
     else:
         raise NotImplementedError
+
+def load_jsonl(file_path):
+    data = []
+    with open(file_path, 'r') as f:
+        for line in f:
+            data.append(json.loads(line.strip()))
+    return data
+
+def load_json(file_path):
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+    return data
 
 def load_data(data_args):
     if 'jsonl' in data_args.data_path:
