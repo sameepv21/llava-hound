@@ -12,7 +12,7 @@ cd $dpo_dir
 wget -c -O sft_dpo_17k.jsonl https://huggingface.co/datasets/ShareGPTVideo/train_video_and_instruction/resolve/main/video_instruction/train/dpo/sft_dpo_17k.jsonl?download=true
 
 
-video_zip_dir=$VIDEO_DATA_DIR/train_zip
+video_zip_dir=$TRAIN_DATA_DIR/train_zip
 mkdir -p $video_zip_dir
 cd $video_zip_dir
 
