@@ -1,3 +1,4 @@
+TRAIN_DATA_DIR=/scratch/svani/data/llava-hound-2/train
 sft_dir=$TRAIN_DATA_DIR/sft
 mkdir -p $sft_dir
 cd $sft_dir
@@ -27,7 +28,7 @@ echo "finish downloading"
 for chunk_path in "$video_zip_dir"/chunk_*; do
     cd $TRAIN_VIDEO_DIR
     tar -xzf ${chunk_path} -C $train_dir . &
-    echo Decompressing $chunk_path
+    echo Decompressing $chunk_pat
 done
 wait
 

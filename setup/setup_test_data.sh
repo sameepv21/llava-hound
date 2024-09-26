@@ -2,7 +2,7 @@ cd setup
 # source set_path.sh # run this first
 
 repo_id=ShareGPTVideo/test_video_and_instruction
-local_dir=$DATA_DIR
+local_dir=/scratch/svani/data/llava-hound-2/test
 instruction_data_dir=${DATA_DIR}/video_instruction
 remote_dir=video_instruction/test/test_result.tar.gz
 repo_type=dataset
