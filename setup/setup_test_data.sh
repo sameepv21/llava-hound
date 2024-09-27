@@ -1,14 +1,14 @@
 cd setup
 # source set_path.sh # run this first
 
-DATA_DIR=/scratch/svani/data/llava-hound-2/test
+TEST_VIDEO_DIR=/scratch/svani/data/llava-hound/test/video_data/test
 repo_id=ShareGPTVideo/test_video_and_instruction
-local_dir=/scratch/svani/data/llava-hound-2/test
+local_dir=/scratch/svani/data/llava-hound/test
 instruction_data_dir=${DATA_DIR}/video_instruction
 remote_dir=video_instruction/test/test_result.tar.gz
 repo_type=dataset
 
-export PYTHONPATH="/home/svani/.conda/envs/llava-hound"
+export PYTHONPATH=.
 python3 setup_test_data.py --repo_id $repo_id \
 --local_dir $local_dir \
 --repo_type $repo_type
@@ -18,7 +18,7 @@ python3 setup_test_data.py --repo_id $repo_id \
 
 data_names=("msrvtt" "msvd" "tgif" 'ssv2' 'actnet' 'vidal' 'webvid')
 for data_name in ${data_names[@]}; do
-    tar -xzvf $DATA_DIR/${data_name}.tar.gz -C $DATA_DIR &
+    tar -xzvf $TEST_VIDEO_DIR/${data_name}.tar.gz -C $TEST_VIDEO_DIR &
 done
 wait
 echo "Done decompressing all video data."

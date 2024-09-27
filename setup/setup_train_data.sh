@@ -1,4 +1,4 @@
-TRAIN_DATA_DIR=/scratch/svani/data/llava-hound-2/train
+TRAIN_DATA_DIR=/scratch/svani/data/llava-hound/train
 sft_dir=$TRAIN_DATA_DIR/sft
 mkdir -p $sft_dir
 cd $sft_dir
