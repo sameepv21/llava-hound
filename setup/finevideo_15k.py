@@ -1,10 +1,9 @@
 import os
 import random
 import shutil
-import pandas as pd
 
 source_dir = "/scratch/svani/data/finevideo/data"
-destination_dir = "/scratch/svani/data/finevideo/15k_subset"
+destination_dir = "/scratch/svani/data/finevideo/finevideo_15k"
 os.makedirs(destination_dir, exist_ok=True)
 
 # Get list of all parquet files in the source directory
