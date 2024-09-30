@@ -25,11 +25,11 @@ done
 wait
 echo "finish downloading"
 
-for chunk_path in "$video_zip_dir"/chunk_*; do
-    cd $TRAIN_VIDEO_DIR
-    tar -xzf ${chunk_path} -C $train_dir . &
-    echo Decompressing $chunk_pat
-done
-wait
+# for chunk_path in "$video_zip_dir"/chunk_*; do
+#     cd $TRAIN_VIDEO_DIR
+#     tar -xzf ${chunk_path} -C $train_dir . &
+#     echo Decompressing $chunk_pat
+# done
+# wait
 
-echo "Done decompressing all chunks."
+# echo "Done decompressing all chunks."
