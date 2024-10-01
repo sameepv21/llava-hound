@@ -43,4 +43,4 @@ if __name__ == "__main__":
         descriptions.update(generate_annotations(file_name))
     
     with open(os.path.join(ANNOTATION_DIR, ANNOTATION_FILENAME), 'w') as f:
-        json.dumps(descriptions, f)
+        json.dump(descriptions, f)
