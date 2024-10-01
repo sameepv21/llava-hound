@@ -33,21 +33,21 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--start_idx', required=True, type=int)
-parser.add_argument('--end_idx', required=True, type=int)
+# parser.add_argument('--start_idx', required=True, type=int)
+# parser.add_argument('--end_idx', required=True, type=int)
 # parser.add_argument('--batch_idx', required=True, type=int)
 # parser.add_argument('--total_batch', default=10, type=int)
-parser.add_argument('--save_interval', default=100, type=int, help="Interval of iterations to save the output JSON")
-parser.add_argument('--batch_size', default=32, type=int)
-parser.add_argument('--data_path', type=str, default="data/cc12m", help='path to the save directory')
-parser.add_argument('--save_path', type=str, default="/data/data/matt/learning-to-compose-and-map/data/cc12m/hard_negative_mistral", help='path to the save directory')
+# parser.add_argument('--save_interval', default=100, type=int, help="Interval of iterations to save the output JSON")
+parser.add_argument('--batch_size', default=33, type=int)
+parser.add_argument('--data_path', type=str, default="/scratch/svani/data/finevideo", help='path to the save directory')
+parser.add_argument('--save_path', type=str, default="/scratch/svani/data/finevideo", help='path to the save directory')
 args = parser.parse_args()
 
 save_path = args.save_path
 os.makedirs(save_path, exist_ok=True)
 
-org_path = os.path.join(args.data_path, "cc12m_original.csv")
-gpt_path = os.path.join(args.data_path, "cc12m_human.txt")
+org_path = os.path.join(args.data_path, "finevideo-15k-descriptions.json")
+gpt_path = os.path.join(args.data_path, "finevideo-15k-dpo-descriptions.json")
 
 org_df = pd.read_csv(org_path, header=None, names=["image_id", "caption", "url"])
 data = []
