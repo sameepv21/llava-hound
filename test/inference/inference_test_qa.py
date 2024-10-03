@@ -64,6 +64,10 @@ def main(model_path, base_model_path, data_path, output_dir, output_name, chunk_
     model_name = get_model_name_from_path(model_path)
     logger.info(f"model {model_name}")
     tokenizer, model, processor, context_len = load_pretrained_model(model_path, base_model_path, model_name, device_map={"":0})
+    peft_path="/scratch/svani/experiments/llava-hound-experiments/llava-next-video-v1"
+    model.load_adapter(peft_path)
+    print(f"Loaded adapters from {peft_path}")
+
 
     model_dict = {
         "tokenizer": tokenizer,

@@ -14,12 +14,15 @@ echo model path: $model_path
 echo base model path: $base_model_path
 
 # chunking and parallelism
-gpu_list="0,1,2,3,4,5,6,7"
+gpu_list="0"
 IFS=',' read -ra GPULIST <<< "$gpu_list"
 
 CHUNKS=${#GPULIST[@]}
 
 export PYTHONPATH=.
+
+cache_dir=/scratch/svani/.cache
+VIDEO_DATA_DIR=/scratch/svani/data/llava-hound/test/video_data/test/msrvtt
 
 for IDX in $(seq 0 $((CHUNKS-1))); do
   CUDA_VISIBLE_DEVICES=${GPULIST[$IDX]} python3 test/inference/inference_test_qa.py \
