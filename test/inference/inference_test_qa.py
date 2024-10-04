@@ -18,7 +18,6 @@ from inference.inference import model_function, split_list, get_chunk, get_range
 from transformers import CLIPImageProcessor
 from PIL import Image
 
-        
 def main(model_path, base_model_path, data_path, output_dir, output_name, chunk_idx, chunks, video_dir=None, range_start=None, range_end=None, **kwargs):    
     temperature = kwargs.get('temperature', 0.0)
     top_p = kwargs.get('top_p', 0.9)
@@ -78,8 +77,7 @@ def main(model_path, base_model_path, data_path, output_dir, output_name, chunk_
 
     output_path = f"{output_dir}/{output_name}"
     inference_data_list(model_dict, chunks, output_path, make_data_to_send, **kwargs)
-   
-        # save_jsonl(f"{output_dir}/{output_name}", item, append=True)
+    save_jsonl(f"{output_dir}/{output_name}", item, append=True)
 
 if __name__ == "__main__":
     fire.Fire(main)
