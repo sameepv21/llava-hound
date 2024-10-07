@@ -93,6 +93,9 @@ def model_function(model_dict, input_data):
     # stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
 
     with torch.inference_mode():
+        input_ids = input_ids.to("cuda")
+        model = model.to('cuda')
+        modal_tensor = modal_tensor.to("cuda")
         output_ids = model.generate(
             input_ids,
             images=[[modal_tensor], [modal_type.lower()]],
@@ -149,20 +152,20 @@ def inference_data_list(model_dict, data_list, output_path, proc_func, **kwargs)
         data_to_send = proc_func(item, **kwargs)
         if data_to_send['id'] in res_idx:
             continue
-        try:
-            resulting_output = model_function(model_dict, data_to_send)
-            data_to_send['model_prediction'] = {
-                'status': 'success',
-                'message': resulting_output,
-            }
-            if i < 100:
-                print(resulting_output)
-        except Exception as e:
-            logger.error(f"error {e} for {data_to_send['id']}")
-            # model prediction as error message
-            data_to_send['model_prediction'] = {
-                'status': 'error',
-                'message': str(e),
-            }
+        # try:
+        resulting_output = model_function(model_dict, data_to_send)
+        data_to_send['model_prediction'] = {
+            'status': 'success',
+            'message': resulting_output,
+        }
+        if i < 100:
+            print(resulting_output)
+        # except Exception as e:
+        #     logger.error(f"error {e} for {data_to_send['id']}")
+        #     # model prediction as error message
+        #     data_to_send['model_prediction'] = {
+        #         'status': 'error',
+        #         'message': str(e),
+        #     }
         fout.write(json.dumps(data_to_send) + '\n')
     fout.close()

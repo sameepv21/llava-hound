@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 
+
 import os
 import warnings
 import shutil
@@ -21,6 +22,24 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, BitsAn
 import torch
 from llava.model import *
 from llava.constants import DEFAULT_X_PATCH_TOKEN, DEFAULT_X_START_TOKEN, DEFAULT_X_END_TOKEN
+from dataclasses import dataclass, field
+from typing import Dict, Optional, Sequence, List, Any, Tuple, Union
+
+@dataclass
+class ModelArguments:
+    model_name_or_path: Optional[str] = field(default="facebook/opt-125m")
+    version: Optional[str] = field(default="v0")
+    freeze_backbone: bool = field(default=False)
+    tune_mm_mlp_adapter: bool = field(default=False)
+    X: Optional[List[str]] = field(default=None)
+    image_tower: Optional[str] = field(default=None)
+    video_tower: Optional[str] = field(default=None)
+    mm_vision_select_layer: Optional[int] = field(default=-1)   # default to the last layer
+    pretrain_mm_mlp_adapter: Optional[str] = field(default=None)
+    mm_projector_type: Optional[str] = field(default='linear')
+    mm_use_x_start_end: bool = field(default=False)
+    mm_use_x_patch_token: bool = field(default=True)
+    mm_vision_select_feature: Optional[str] = field(default="patch")
 
 CACHE_DIR=os.environ.get('cache_dir', None)
 def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, load_4bit=False, device_map="auto", device="cuda", use_flash_attn=False, legacy=False, cache_dir=CACHE_DIR):
@@ -140,9 +159,15 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             for x in X:
                 tokenizer.add_tokens([DEFAULT_X_START_TOKEN[x.upper()], DEFAULT_X_END_TOKEN[x.upper()]], special_tokens=True)
         model.resize_token_embeddings(len(tokenizer))
-        print(X)    
+        print(X)
+        model_args = ModelArguments(X=X, image_tower = "LanguageBind/LanguageBind_Image", video_tower = "LanguageBind/LanguageBind_Video_merge")
         if 'Image' in X:
             image_tower = model.get_image_tower()
+            if image_tower is None:
+                model.get_model().initialize_image_modules(
+                    model_args=model_args,
+                )
+                image_tower = model.get_image_tower()
             if not image_tower.is_loaded:
                 image_tower.load_model()
             image_tower.to(device=device, dtype=torch.float16)
@@ -151,6 +176,11 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
 
         if 'Video' in X:
             video_tower = model.get_video_tower()
+            if video_tower is None:
+                model.get_model().initialize_video_modules(
+                    model_args=model_args,
+                )
+                video_tower = model.get_video_tower()
             if not video_tower.is_loaded:
                 video_tower.load_model()
             video_tower.to(device=device, dtype=torch.float16)
