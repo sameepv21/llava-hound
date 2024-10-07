@@ -96,6 +96,7 @@ def model_function(model_dict, input_data):
         input_ids = input_ids.to("cuda")
         model = model.to('cuda')
         modal_tensor = modal_tensor.to("cuda")
+        model.half()
         output_ids = model.generate(
             input_ids,
             images=[[modal_tensor], [modal_type.lower()]],

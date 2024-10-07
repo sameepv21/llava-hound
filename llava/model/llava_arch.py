@@ -134,7 +134,6 @@ class LlavaMetaForCausalLM(ABC):
     def encode_videos(self, videos):
         video_features = self.get_model().get_video_tower()(videos)
         video_features = self.get_model().mm_projector(video_features)
-        video_features = video_features.to("cuda", torch.float16)
         return video_features
 
     def prepare_inputs_labels_for_multimodal(
