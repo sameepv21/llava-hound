@@ -159,8 +159,8 @@ def inference_data_list(model_dict, data_list, output_path, proc_func, **kwargs)
             'status': 'success',
             'message': resulting_output,
         }
-        if i < 100:
-            print(resulting_output)
+        # if i < 100:
+        #     print(resulting_output)
         # except Exception as e:
         #     logger.error(f"error {e} for {data_to_send['id']}")
         #     # model prediction as error message

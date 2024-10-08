@@ -3,9 +3,8 @@
 # videollava_dpo \
 # $SAVE_DIR/ShareGPT-VideoLLaVA/Video-LLaVA-DPO-Sample-ep3
 
-output_model_name=LLaVA-Next-DPO-v1
+output_model_name=llava-next-video-7b-lora-v1
 model_path=lmms-lab/LLaVA-NeXT-Video-7B
-peft_path=/scratch/svani/experiments/llava-hound-experiments/llava-next-video-v1 # None if evaluating baselines
 model_base="None"
 
 TEST_DATA_DIR=/scratch/svani/data/llava-hound/test/video_instruction/test
@@ -41,4 +40,4 @@ $output_path/${output_model_name} \
 $model_path \
 $model_base
 
-bash test/eval/eval_official_zeroshot_qa.sh $output_path/${output_model_name}.jsonl ${TEST_RESULT_DIR}/msrvtt/eval_test_official
+# bash test/eval/eval_official_zeroshot_qa.sh $output_path/${output_model_name}.jsonl ${TEST_RESULT_DIR}/msrvtt/eval_test_official

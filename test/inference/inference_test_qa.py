@@ -22,6 +22,7 @@ def main(model_path, base_model_path, data_path, output_dir, output_name, chunk_
     temperature = kwargs.get('temperature', 0.0)
     top_p = kwargs.get('top_p', 0.9)
     max_new_tokens = kwargs.get('max_new_tokens', 1024)
+    peft_path = kwargs.get("load_peft")
 
     data = load_json_data(data_path)
     chunks = get_chunk(data, chunks, chunk_idx)
@@ -63,9 +64,10 @@ def main(model_path, base_model_path, data_path, output_dir, output_name, chunk_
     model_name = get_model_name_from_path(model_path)
     logger.info(f"model {model_name}")
     tokenizer, model, processor, context_len = load_pretrained_model(model_path, base_model_path, model_name, device_map={"":0})
-    peft_path="/scratch/svani/experiments/llava-hound-experiments/llava-next-video-7b-lora-v1"
-    model.load_adapter(peft_path)
-    print(f"Loaded adapters from {peft_path}")
+    
+    if peft_path == None:
+        model.load_adapter(peft_path)
+        print(f"Loaded adapters from {peft_path}")
 
 
     model_dict = {
