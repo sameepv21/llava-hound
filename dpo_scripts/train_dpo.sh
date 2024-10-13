@@ -1,4 +1,4 @@
-input_model_name=${1:-"lmms-lab/LLaVA-NeXT-Video-7B"}
+input_model_name=${1:-"ShareGPTVideo/LLaVA-Hound-SFT"}
 output_model_name=${2:-"/scratch/svani/experiments/llava-hound-experiments"}
 lr=${3:-"5e-7"}
 

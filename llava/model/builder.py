@@ -160,7 +160,13 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
                 tokenizer.add_tokens([DEFAULT_X_START_TOKEN[x.upper()], DEFAULT_X_END_TOKEN[x.upper()]], special_tokens=True)
         model.resize_token_embeddings(len(tokenizer))
         print(X)
-        model_args = ModelArguments(X=X, image_tower = "LanguageBind/LanguageBind_Image", video_tower = "LanguageBind/LanguageBind_Video_merge")
+        model_args = ModelArguments(
+            model_name_or_path=model_path,
+            version="v1",
+            X=X, 
+            image_tower = "LanguageBind/LanguageBind_Image", 
+            video_tower = "LanguageBind/LanguageBind_Video_merge"
+        )
         if 'Image' in X:
             image_tower = model.get_image_tower()
             if image_tower is None:
