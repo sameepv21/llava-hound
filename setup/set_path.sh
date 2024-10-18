@@ -13,9 +13,9 @@ export AZURE_ENDPOINT=""
 export AZURE_OPENAI_KEY=""
 
 # Export usage, choice [openai, azure]
-export OPENAI_BACKEND=""
+export OPENAI_BACKEND="openai"
 # Specific version for testing: "gpt-3.5-turbo-0301"
-export GPT_MODEL_NAME=""
+export GPT_MODEL_NAME="gpt-3.5-turbo-0125"
 # other versions of openai chatgpt-turbo for testing
 # # 0613
 # export GPT_MODEL_NAME="gpt-3.5-turbo-0613"

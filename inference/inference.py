@@ -147,26 +147,18 @@ def inference_data_list(model_dict, data_list, output_path, proc_func, **kwargs)
         logger.info(f"load {len(res)}, full chunck length: {ll}, need process length: {ll - len(res)}")
     else:
         res_idx = set()
-
-    fout = open(output_path, 'a')
-    for i, item in tqdm(enumerate(data_list), total=len(data_list)):
-        data_to_send = proc_func(item, **kwargs)
-        if data_to_send['id'] in res_idx:
-            continue
-        # try:
-        resulting_output = model_function(model_dict, data_to_send)
-        data_to_send['model_prediction'] = {
-            'status': 'success',
-            'message': resulting_output,
-        }
-        # if i < 100:
-        #     print(resulting_output)
-        # except Exception as e:
-        #     logger.error(f"error {e} for {data_to_send['id']}")
-        #     # model prediction as error message
-        #     data_to_send['model_prediction'] = {
-        #         'status': 'error',
-        #         'message': str(e),
-        #     }
-        fout.write(json.dumps(data_to_send) + '\n')
-    fout.close()
+        json_data = []
+        for i, item in tqdm(enumerate(data_list), total=len(data_list)):
+            data_to_send = proc_func(item, **kwargs)
+            if data_to_send['id'] in res_idx:
+                continue
+            resulting_output = model_function(model_dict, data_to_send)
+            data_to_send['model_prediction'] = {
+                'status': 'success',
+                'message': resulting_output,
+            }
+            json_data.append(data_to_send)
+        with open(output_path, 'w') as f:
+            for item in json_data:
+                json.dump(item, f)
+                f.write('\n')

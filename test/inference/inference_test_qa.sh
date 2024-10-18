@@ -28,19 +28,20 @@ CHUNKS=${#GPULIST[@]}
 export PYTHONPATH=.
 
 for IDX in $(seq 0 $((CHUNKS-1))); do
-  CUDA_VISIBLE_DEVICES=${GPULIST[$IDX]} python3 test/inference/inference_test_qa.py \
-      --model_path ${model_path} --base_model_path ${base_model_path} \
-      --cache_dir ${cache_dir} \
-      --load_peft ${load_peft} \
-      --data_path ${data_path} --video_dir $VIDEO_DATA_DIR \
-      --output_dir ${output_dir} \
-      --output_name ${CHUNKS}_${IDX}.jsonl \
-      --chunks $CHUNKS \
-      --chunk_idx $IDX &
+    CUDA_VISIBLE_DEVICES=${GPULIST[$IDX]} python3 test/inference/inference_test_qa.py \
+        --model_path ${model_path} --base_model_path ${base_model_path} \
+        --cache_dir ${cache_dir} \
+        --load_peft ${load_peft} \
+        --data_path ${data_path} --video_dir $VIDEO_DATA_DIR \
+        --output_dir ${output_dir} \
+        --output_name ${CHUNKS}_${IDX}.jsonl \
+        --chunks $CHUNKS \
+        --chunk_idx $IDX &
 done
 wait
 
 output_file=${output_dir}.jsonl
+echo $output_file
 
 # Clear out the output file if it exists.
 > "$output_file"
@@ -49,5 +50,3 @@ output_file=${output_dir}.jsonl
 for IDX in $(seq 0 $((CHUNKS-1))); do
     cat ${output_dir}/${CHUNKS}_${IDX}.jsonl >> "$output_file"
 done
-
-# ps -ef | grep actnet_exp/inference_test_actnet_qa.py | awk '{print $2}' | xargs -r kill -9

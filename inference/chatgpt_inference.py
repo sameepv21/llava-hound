@@ -54,6 +54,10 @@ def openai_generate(model_name, prompt, system_prompt=None, **kwargs):
         "role": "user",
         "content": prompt
     })
+    print('\n\n')
+    print("messages: ", messages)
+    print('\n\n')
+
     chat_completion = client.chat.completions.create(
         model=model_name,
         messages=messages,

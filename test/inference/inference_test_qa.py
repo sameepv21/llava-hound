@@ -65,7 +65,7 @@ def main(model_path, base_model_path, data_path, output_dir, output_name, chunk_
     logger.info(f"model {model_name}")
     tokenizer, model, processor, context_len = load_pretrained_model(model_path, base_model_path, model_name, device_map={"":0})
     
-    if peft_path != None:
+    if peft_path:
         model.load_adapter(peft_path)
         print(f"Loaded adapters from {peft_path}")
 

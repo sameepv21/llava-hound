@@ -3,7 +3,7 @@
 # videollava_dpo \
 # $SAVE_DIR/ShareGPT-VideoLLaVA/Video-LLaVA-DPO-Sample-ep3
 
-output_model_name=llava-hound-dpo
+output_model_name=llava-hound-sft
 model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
 load_peft=/scratch/svani/experiments/llava-hound-experiments/llava-hound-dpo
@@ -38,11 +38,11 @@ output_path=$TEST_RESULT_DIR/msrvtt/inference_test_official
 cache_dir=/home/cr8dl-user/.cache
 VIDEO_DATA_DIR=/home/cr8dl-user/sameep/datasets/llava-hound/test/video_data
 
-# bash test/inference/inference_test_qa.sh \
-# $data_path \
-# $output_path/${output_model_name} \
-# $model_path \
-# $model_base \
-# $load_peft
+bash test/inference/inference_test_qa.sh \
+$data_path \
+$output_path/${output_model_name} \
+$model_path \
+$model_base \
+$load_peft
 
 bash test/eval/eval_official_zeroshot_qa.sh $output_path/${output_model_name}.jsonl ${TEST_RESULT_DIR}/msrvtt/eval_test_official
