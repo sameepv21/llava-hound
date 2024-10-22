@@ -1,6 +1,7 @@
 import os
 import cv2
 import argparse
+from tqdm import tqdm
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Video Frame Sampler')
@@ -24,7 +25,7 @@ def main():
     args = parse_args()
     video_files = os.listdir(args.input_dir)
     
-    for video_file in video_files:
+    for video_file in tqdm(video_files):
         video_path = os.path.join(args.input_dir, video_file)
         video_id = os.path.splitext(video_file)[0]  # Extracting video_id from the file name
         output_dir = os.path.join(args.output_dir, video_id)
