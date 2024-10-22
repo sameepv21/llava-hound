@@ -13,3 +13,4 @@ pip install gdown
 pip install wheel
 pip install flash-attn --no-build-isolation
 pip install nvitop
+pip install yt-dlp # needed for downloading videos of cinepile
