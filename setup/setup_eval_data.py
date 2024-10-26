@@ -48,7 +48,6 @@ def read_mvbench(dir):
 
                 elif "fine_grained_pose" in filename: # Skip this as dataset is not there
                     del data[index]
-                    # row['video'] = os.path.join("fine_grained_pose", row['video'])
 
 
 
@@ -66,13 +65,8 @@ def read_mvbench(dir):
                     row['video'] = os.path.join("vlnqa", row['video'])
                 elif "moving_count" in filename:
                     row['video'] = os.path.join("clevrer", row['video'])
-
-
-
-                elif "scene_transition" in filename: # Skip this as dataset is not there
-                    del data[index]
-
-                    
+                elif "scene_transition" in filename:
+                    row['video'] = os.path.join("scene_qa", row['video'])                    
                 elif "action_prediction" in filename:
                     row['video'] = os.path.join("star", row['video'])
                 elif "episodic_reasoning" in filename:
