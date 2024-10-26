@@ -52,3 +52,5 @@ sol
 sol_output
 cache_dir
 venv
+temp.py
+cache

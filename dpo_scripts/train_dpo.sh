@@ -1,8 +1,8 @@
 input_model_name=${1:-"ShareGPTVideo/LLaVA-Hound-SFT"}
-output_model_name=${2:-"/scratch/svani/experiments/llava-hound-experiments"}
+output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/new_temporal_dpo"}
 lr=${3:-"5e-7"}
 
-cache_dir=/scratch/svani/.cache
+cache_dir=/home/cr8dl-user/.cache
 export cache_dir=$cache_dir
 
 # export WANDB_MODE=disabled
@@ -20,19 +20,19 @@ output_dir=$output_model_name
 mkdir -p $output_dir
 
 # DATA
-data_path=/scratch/svani/data/llava-hound/train/dpo/sft_dpo_17k.jsonl
+data_path=/home/cr8dl-user/sameep/datasets/llava-hound/temporal_infused_preference_data.json
 
-video_dir=/scratch/svani/data/llava-hound/train/train_zip
+video_dir=/home/cr8dl-user/sameep/datasets/llava-hound
 image_dir="/"
 
 # sudo chmod +x -R .
-export PYTHONPATH="/home/svani/.conda/envs/llava-hound/bin/python"
+export PYTHONPATH="/home/cr8dl-user/sameep/Video-LLMs/llava-hound/venv/bin/python"
 rand=$RANDOM
 port=$((19000 + $rand % 1000))
 
 # python -m dpo_scripts.run_dpo \
 torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_dpo \
-    --deepspeed /home/svani/Video-LLMs/LLaVA-Hound/zero2.json \
+    --deepspeed /home/cr8dl-user/sameep/Video-LLMs/llava-hound/zero2.json \
     --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
     --model_name_or_path $model_name_or_path \
     --dpo_alpha 1.0 --beta 0.1 --gamma 0 \
