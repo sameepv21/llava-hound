@@ -34,9 +34,9 @@ def read_mvbench(dir):
             file_path = os.path.join(dir, filename)
             data = read_json_data(file_path)
             # print(filename)
-            for row in data:
+            for index, row in enumerate(data):
                 if "fine_grained_action" in filename:
-                    row['video'] = os.path.join("Moments_in_Time_Raw", row['video'])
+                    row['video'] = os.path.join("Moments_in_Time_Raw", row['video']) 
                 elif "action_antonym" in filename:
                     row['video'] = os.path.join("ssv2_video", row['video'])
                 elif "action_count" in filename:
@@ -46,8 +46,9 @@ def read_mvbench(dir):
 
 
 
-                elif "fine_grained_pose" in filename: # LOOK INTO THIS
-                    row['video'] = os.path.join("fine_grained_pose", row['video'])
+                elif "fine_grained_pose" in filename: # Skip this as dataset is not there
+                    del data[index]
+                    # row['video'] = os.path.join("fine_grained_pose", row['video'])
 
 
 
@@ -58,30 +59,35 @@ def read_mvbench(dir):
                 elif "moving_attribute" in filename:
                     row['video'] = os.path.join("clevrer", row['video'])
                 elif "object_shuffle" in filename:
-                    row['video'] = os.path.join("object_shuffle", row['video'])
+                    row['video'] = os.path.join("perception", row['video'])
                 elif "action_localization" in filename:
-                    row['video'] = os.path.join("action_localization", row['video'])
+                    row['video'] = os.path.join("sta", row['video'])
                 elif "egocentric_navigation" in filename:
-                    row['video'] = os.path.join("egocentric_navigation", row['video'])
+                    row['video'] = os.path.join("vlnqa", row['video'])
                 elif "moving_count" in filename:
-                    row['video'] = os.path.join("moving_count", row['video'])
-                elif "scene_transition" in filename:
-                    row['video'] = os.path.join("scene_transition", row['video'])
+                    row['video'] = os.path.join("clevrer", row['video'])
+
+
+
+                elif "scene_transition" in filename: # Skip this as dataset is not there
+                    del data[index]
+
+                    
                 elif "action_prediction" in filename:
-                    row['video'] = os.path.join("action_prediction", row['video'])
+                    row['video'] = os.path.join("star", row['video'])
                 elif "episodic_reasoning" in filename:
-                    row['video'] = os.path.join("episodic_reasoning", row['video'])
+                    row['video'] = os.path.join("tvqa", row['video'])
                 elif "moving_direction" in filename:
-                    row['video'] = os.path.join("moving_direction", row['video'])
+                    row['video'] = os.path.join("clevrer", row['video'])
                 elif "state_change" in filename:
-                    row['video'] = os.path.join("state_change", row['video'])
+                    row['video'] = os.path.join("perception", row['video'])
                 elif "action_sequence" in filename:
-                    row['video'] = os.path.join("action_sequence", row['video'])
+                    row['video'] = os.path.join("star", row['video'])
                 elif "object_existence" in filename:
-                    row['video'] = os.path.join("object_existence", row['video'])
+                    row['video'] = os.path.join("clevrer", row['video'])
                 elif "unexpected_action" in filename:
-                    row['video'] = os.path.join("unexpected_action", row['video'])
-            # combined_data.extend(data)
+                    row['video'] = os.path.join("FunQA_test", row['video'])
+            combined_data.extend(data)
     return combined_data
 
 def read_parquet(filepath):
