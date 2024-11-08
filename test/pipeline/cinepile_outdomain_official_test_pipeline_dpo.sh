@@ -3,11 +3,11 @@
 output_model_name=llava-hound-dpo-temporal
 model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
-load_peft=/home/cr8dl-user/sameep/experiments/new_temporal_dpo
+load_peft=/home/cr8dl-user/sameep/experiments/temporal_dpo_final
 
 data_name=cinepile
 TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/${data_name}
-TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/new_dpo
+TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/final-dpo
 
 data_path=$TEST_DATA_DIR/llava_hound_test.json
 output_path=$TEST_RESULT_DIR/${data_name}/inference_test_official
