@@ -1,5 +1,5 @@
 input_model_name=${1:-"ShareGPTVideo/LLaVA-Hound-SFT"}
-output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/new_temporal_dpo"}
+output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/temporal_dpo_final"}
 lr=${3:-"5e-7"}
 
 cache_dir=/home/cr8dl-user/.cache
@@ -10,7 +10,7 @@ export WANDB_PROJECT=llava-hound
 export WANDB_NAME=dpo
 
 # gpu_ids=0
-gpu_ids=0
+gpu_ids=0,1,2,3,4,5
 export CUDA_VISIBLE_DEVICES=$gpu_ids
 n_gpu=$(echo $gpu_ids | tr "," "\n" | wc -l)
 echo "Using $n_gpu GPUs: $gpu_ids"
@@ -20,9 +20,9 @@ output_dir=$output_model_name
 mkdir -p $output_dir
 
 # DATA
-data_path=/home/cr8dl-user/sameep/datasets/llava-hound/temporal_infused_preference_data.json
+data_path=/home/cr8dl-user/sameep/datasets/llava-hound/temporal_dpo_15.json
 
-video_dir=/home/cr8dl-user/sameep/datasets/llava-hound
+video_dir=/home/cr8dl-user/sameep/datasets/finevideo/finevideo_5k_trimmed/normal_frames
 image_dir="/"
 
 # sudo chmod +x -R .
@@ -63,7 +63,7 @@ torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_dpo \
     --learning_rate $lr --freeze_mm_mlp_adapter True \
     --weight_decay 0. --warmup_ratio 0.1 \
     --lr_scheduler_type "linear" \
-    --logging_steps 50 \
+    --logging_steps 25 \
     --tf32 True \
     --model_max_length 2048 \
     --gradient_checkpointing True \

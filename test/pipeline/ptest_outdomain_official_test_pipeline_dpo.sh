@@ -1,14 +1,14 @@
 # bash test/pipeline/outdomain_official_test_pipeline.sh \
 
-output_model_name=llava-hound-dpo
+output_model_name=llava-hound-dpo-temporal
 model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
-load_peft=/home/cr8dl-user/sameep/experiments/llava-hound-dpo
-
-TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/perceptiontest
-TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/perceptiontest/dpo
+load_peft=/home/cr8dl-user/sameep/experiments/new_temporal_dpo
 
 data_name=perceptiontest
+TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/perceptiontest/
+TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/perceptiontest/new_dpo
+
 data_path=$TEST_DATA_DIR/llava_hound_valid.json
 output_path=$TEST_RESULT_DIR/perceptiontest/inference_test_official
 
