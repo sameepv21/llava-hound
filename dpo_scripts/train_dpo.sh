@@ -1,5 +1,5 @@
 input_model_name=${1:-"ShareGPTVideo/LLaVA-Hound-SFT"}
-output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/temporal_dpo_final"}
+output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/llava_hound_dpo_v2"}
 lr=${3:-"5e-7"}
 
 cache_dir=/home/cr8dl-user/.cache
@@ -7,10 +7,10 @@ export cache_dir=$cache_dir
 
 # export WANDB_MODE=disabled
 export WANDB_PROJECT=llava-hound
-export WANDB_NAME=dpo
+export WANDB_NAME=lh-basic-dpo-v2
 
 # gpu_ids=0
-gpu_ids=0,1,2,3,4,5
+gpu_ids=2,3,4,5,6
 export CUDA_VISIBLE_DEVICES=$gpu_ids
 n_gpu=$(echo $gpu_ids | tr "," "\n" | wc -l)
 echo "Using $n_gpu GPUs: $gpu_ids"
@@ -20,9 +20,9 @@ output_dir=$output_model_name
 mkdir -p $output_dir
 
 # DATA
-data_path=/home/cr8dl-user/sameep/datasets/llava-hound/temporal_dpo_15.json
+data_path=/home/cr8dl-user/sameep/datasets/llava-hound/sft_dpo_17k.jsonl
 
-video_dir=/home/cr8dl-user/sameep/datasets/finevideo/finevideo_5k_trimmed/normal_frames
+video_dir=/home/cr8dl-user/sameep/datasets/llava-hound/train_300k/train_zip
 image_dir="/"
 
 # sudo chmod +x -R .

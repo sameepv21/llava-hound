@@ -1,12 +1,12 @@
 # bash test/pipeline/outdomain_official_test_pipeline.sh \
 
-output_model_name=llava-hound-sft
-model_path=ShareGPTVideo/LLaVA-Hound-SFT
+output_model_name=llava-hound-dpo
+model_path=ShareGPTVideo/LLaVA-Hound-DPO
 model_base="None"
 load_peft="None"
 
 TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/perceptiontest
-TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/perceptiontest/base
+TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/perceptiontest/base_lh_dpo_v1
 
 data_name=perceptiontest
 data_path=$TEST_DATA_DIR/llava_hound_valid.json
