@@ -7,7 +7,7 @@ data_name=ours
 TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/llava-hound
 TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/base_lh_sft_checkpoint
 
-data_path=$TEST_DATA_DIR/temporal_benchmark.json
+data_path=$TEST_DATA_DIR/temporal_benchmark_sampled.json
 output_path=$TEST_RESULT_DIR/${data_name}/inference_test_official
 
 cache_dir=/home/cr8dl-user/.cache

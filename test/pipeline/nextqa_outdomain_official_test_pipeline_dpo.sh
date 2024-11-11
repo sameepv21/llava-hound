@@ -3,7 +3,7 @@ model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
 load_peft=/home/cr8dl-user/sameep/experiments/temporal_infused_dpo_v1
 
-data_name=ours
+data_name=nextqa
 TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/llava-hound
 TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/base_lh_dpo_checkpoint
 
