@@ -1,19 +1,17 @@
-# bash test/pipeline/outdomain_official_test_pipeline.sh \
-
 output_model_name=llava-hound-dpo
 model_path=ShareGPTVideo/LLaVA-Hound-DPO
 model_base="None"
 load_peft="None"
 
-data_name=cinepile
-TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/${data_name}
-TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/base_lh_dpo_v1
+data_name=msrvtt
+TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/llava-hound
+TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/base_lh_dpo_checkpoint
 
-data_path=$TEST_DATA_DIR/llava_hound_test.json
+data_path=$TEST_DATA_DIR/msrvtt.qa.jsonl
 output_path=$TEST_RESULT_DIR/${data_name}/inference_test_official
 
 cache_dir=/home/cr8dl-user/.cache
-VIDEO_DATA_DIR=/home/cr8dl-user/sameep/datasets/${data_name}/frames
+VIDEO_DATA_DIR=$TEST_DATA_DIR
 
 bash test/inference/inference_test_qa.sh \
 $data_path \

@@ -7,7 +7,7 @@ load_peft=/home/cr8dl-user/sameep/experiments/llava_hound_dpo_v2
 
 data_name=perceptiontest
 TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/perceptiontest/
-TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/perceptiontest/llava_hound_dpo_v2
+TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/perceptiontest/llava_hound_dpo_temporal_v2
 
 data_path=$TEST_DATA_DIR/llava_hound_valid.json
 output_path=$TEST_RESULT_DIR/perceptiontest/inference_test_official
