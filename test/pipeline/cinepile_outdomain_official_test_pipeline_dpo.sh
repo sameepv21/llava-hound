@@ -1,13 +1,11 @@
-# bash test/pipeline/outdomain_official_test_pipeline.sh \
-
-output_model_name=llava-hound-dpo-temporal
+output_model_name=lllava-hound-dpo-temporal_scaled_6k
 model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
-load_peft=/home/cr8dl-user/sameep/experiments/temporal_infused_dpo_v1
+load_peft=/home/cr8dl-user/sameep/experiments/scaled_temporal_infused_dpo_v1
 
 data_name=cinepile
 TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/${data_name}
-TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/temporal_infused_dpo_v1
+TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/llava_hound_dpo_temporal_v2_scaled_6k
 
 data_path=$TEST_DATA_DIR/llava_hound_test.json
 output_path=$TEST_RESULT_DIR/${data_name}/inference_test_official

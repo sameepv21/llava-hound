@@ -20,7 +20,7 @@ echo cache dir: $cache_dir
 echo video data dir: $VIDEO_DATA_DIR
 
 # chunking and parallelism
-gpu_list="5" # Use the last GPU
+gpu_list="0,1,2"
 IFS=',' read -ra GPULIST <<< "$gpu_list"
 
 CHUNKS=${#GPULIST[@]}
