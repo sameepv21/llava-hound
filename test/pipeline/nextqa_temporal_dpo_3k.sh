@@ -1,13 +1,13 @@
-output_model_name=llava-hound-dpo
-model_path=ShareGPTVideo/LLaVA-Hound-DPO
+output_model_name=llava-hound-temporal-3k
+model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
-load_peft="None"
+load_peft=/home/cr8dl-user/sameep/experiments/checkpoint-3000
 
 data_name=nextqa
 TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/llava-hound
-TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/base_lh_dpo_checkpoint
+TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/llava-hound-temporal-3k
 
-data_path=$TEST_DATA_DIR/nextqa.json
+data_path=$TEST_DATA_DIR/temporal_benchmark_sampled.json
 output_path=$TEST_RESULT_DIR/${data_name}/inference_test_official
 
 cache_dir=/home/cr8dl-user/.cache

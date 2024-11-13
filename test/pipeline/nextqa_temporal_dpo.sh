@@ -1,17 +1,17 @@
-output_model_name=lllava-hound-dpo-temporal_scaled_3k
+output_model_name=llava-hound-temporal
 model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
-load_peft=/home/cr8dl-user/sameep/experiments/checkpoint-3000
+load_peft=/home/cr8dl-user/sameep/experiments/temporal_infused_dpo_v1
 
-data_name=cinepile
-TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/${data_name}
-TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/llava_hound_dpo_temporal_3k
+data_name=nextqa
+TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/llava-hound
+TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/llava-hound-temporal
 
-data_path=$TEST_DATA_DIR/llava_hound_test.json
+data_path=$TEST_DATA_DIR/temporal_benchmark_sampled.json
 output_path=$TEST_RESULT_DIR/${data_name}/inference_test_official
 
 cache_dir=/home/cr8dl-user/.cache
-VIDEO_DATA_DIR=/home/cr8dl-user/sameep/datasets/${data_name}/frames
+VIDEO_DATA_DIR=$TEST_DATA_DIR
 
 bash test/inference/inference_test_qa.sh \
 $data_path \
