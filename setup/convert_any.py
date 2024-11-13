@@ -16,9 +16,13 @@ def sample_frames(video_path, output_dir):
     cap = cv2.VideoCapture(video_path)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     sample_interval = total_frames // 10
+    if sample_interval == 0:
+        sample_interval = 1
     frame_count = 1
     for i in range(total_frames):
         ret, frame = cap.read()
+        if sample_interval == 0:
+            print(f'filename {video_path}')
         if i % sample_interval == 0:
             if frame is not None:
                 cv2.imwrite(os.path.join(output_dir, f'c01_{frame_count:04d}.jpeg'), frame)
