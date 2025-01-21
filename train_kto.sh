@@ -1,5 +1,5 @@
 input_model_name=${1:-"ShareGPTVideo/LLaVA-Hound-SFT"}     # rhymes-ai/Aria-Base-8K. THIS SCRIPT NEEDS transformers==4.44
-output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/llava_hound_spare"}
+output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/llava_hound_kto"}
 lr=${3:-"5e-7"}
 
 cache_dir=/home/cr8dl-user/.cache
@@ -7,10 +7,11 @@ export cache_dir=$cache_dir
 
 # export WANDB_MODE=disabled
 export WANDB_PROJECT=llava-hound
-export WANDB_NAME=scaled_temporal_dpo_v1
+export WANDB_NAME=scaled_temporal_kto_v1
+export WANDB_API_KEY=`echo $WAND_API_KEY`
 
 # gpu_ids=0
-gpu_ids=0
+gpu_ids=0,1,2,3
 export CUDA_VISIBLE_DEVICES=$gpu_ids
 n_gpu=$(echo $gpu_ids | tr "," "\n" | wc -l)
 echo "Using $n_gpu GPUs: $gpu_ids"
@@ -20,7 +21,7 @@ output_dir=$output_model_name
 mkdir -p $output_dir
 
 # DATA
-data_path=/home/cr8dl-user/sameep/datasets/llava-hound/temporal_infused_good.json
+data_path=/home/cr8dl-user/sameep/datasets/llava-hound/temporal_kto_infused_good.json
 
 video_dir=/home/cr8dl-user/sameep/datasets/llava-hound/
 image_dir="/"
@@ -30,12 +31,11 @@ export PYTHONPATH="/home/cr8dl-user/sameep/Video-LLMs/llava-hound/venv/bin/pytho
 rand=$RANDOM
 port=$((19000 + $rand % 1000))
 
-# python -m dpo_scripts.run_dpo \
-torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_dpo \
+# python -m dpo_scripts.run_dpo # NOTE: total_batch_size must be ~64 to 128
+torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_kto \
     --deepspeed /home/cr8dl-user/sameep/Video-LLMs/llava-hound/zero2.json \
     --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
     --model_name_or_path $model_name_or_path \
-    --dpo_alpha 1.0 --beta 0.1 --gamma 0 \
     --version v1 \
     --data_path $data_path \
     --video_folder $video_dir \
@@ -51,8 +51,8 @@ torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_dpo \
     --group_by_modality_length False \
     --bf16 True \
     --output_dir $output_dir \
-    --num_train_epochs 3 \
-    --per_device_train_batch_size 4 \
+    --num_train_epochs 1 \
+    --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 4 \
     --evaluation_strategy "no" \
@@ -63,6 +63,7 @@ torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_dpo \
     --learning_rate $lr --freeze_mm_mlp_adapter True \
     --weight_decay 0. --warmup_ratio 0.1 \
     --lr_scheduler_type "linear" \
+    --loss_type apo_zero_unpaired \
     --logging_steps 25 \
     --tf32 True \
     --model_max_length 2048 \

@@ -23,6 +23,8 @@ from .models import (
 from .trainer import (
     DataCollatorForCompletionOnlyLM,
     DPOTrainer,
+    KTOConfig,
+    KTOTrainer,
     IterativeSFTTrainer,
     ModelConfig,
     PPOConfig,
@@ -32,7 +34,6 @@ from .trainer import (
     SFTTrainer,
 )
 from .trainer.utils import get_kbit_device_map, get_peft_config, get_quantization_config
-
 
 if is_diffusers_available():
     from .models import (

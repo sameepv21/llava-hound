@@ -33,19 +33,24 @@ IS_TOKENIZER_GREATER_THAN_0_14 = version.parse(tokenizers.__version__) >= versio
 
 from llava.constants import IGNORE_INDEX, X_TOKEN_INDEX, DEFAULT_X_TOKEN, DEFAULT_X_START_TOKEN, DEFAULT_X_END_TOKEN
 from torch.utils.data import Dataset
-from llava.train.llava_trainer import LLaVADPOTrainer
+from datasets import Dataset as HFDataset
+from llava.train.llava_trainer import LLaVAKTOTrainer
 
 from llava import conversation as conversation_lib
 conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
 from llava.model import *
 from llava.mm_utils import tokenizer_X_token
 from trl.trainer.utils import DPODataCollatorWithPadding
+from trl.trainer import KTOConfig
 
 from PIL import Image
-
+import wandb
 
 local_rank = None
 
+WANDB_API_KEY = os.environ['WANDB_API_KEY']
+wandb.login(key=WANDB_API_KEY)
+# exit(0)
 
 def rank0_print(*args):
     if local_rank == 0:
@@ -83,7 +88,7 @@ class DataArguments:
     num_sample: Optional[int] = field(default=None)
 
 @dataclass
-class TrainingArguments(transformers.TrainingArguments):
+class TrainingArguments(KTOConfig):     # transformers.TrainingArguments
     cache_dir: Optional[str] = field(default=None)
     optim: str = field(default="adamw_torch")
     remove_unused_columns: bool = field(default=False)
@@ -118,9 +123,6 @@ class TrainingArguments(transformers.TrainingArguments):
     group_by_modality_length: bool = field(default=False)
 
     fix_vit: bool = True
-    dpo_alpha: float = field(default=1.0)
-    beta: float = field(default=0.1)
-    gamma: float = field(default=1.0)
     generate_during_eval: bool = field(default=False)
 
 def maybe_zero_3(param, ignore_status=False, name=None):
@@ -429,7 +431,7 @@ def load_data(data_args):
         data_list = load_json(data_args.data_path)
     return data_list
 
-class DPODataset(Dataset):
+class KTODataset(Dataset):
     """Dataset for supervised fine-tuning."""
 
     def __init__(self, data_path: str,
@@ -466,13 +468,12 @@ class DPODataset(Dataset):
             cur_len = cur_len if any([x.lower() in sample for x in DEFAULT_X_TOKEN.keys()]) else -cur_len
             length_list.append(cur_len)
         return length_list
-
+    
     def __getitem__(self, i) -> Dict[str, torch.Tensor]:
         '''
         {
             'prompt': 'Is there a snowman wearing a green scarf and hat in the background?',
-            'chosen': 'No, there is no snowman wearing a green scarf and hat in the background of the image. The image features a person ...',
-            'rejected': 'No, there is no snowman in the background.',
+            'completion': 'No, there is no snowman wearing a green scarf and hat in the background of the image. The image features a person ...',
             'image_path': '/mnt/bn/liangkeg/data/ruohongz/dpo_data/dpo_images/LRVInstruction-000000009569.jpg',
             'image_name': 'LRVInstruction-000000009569.jpg'
         }
@@ -484,6 +485,7 @@ class DPODataset(Dataset):
             #     sources = [sources]
             # assert len(sources) == 1, "Don't know why it is wrapped to a list"  # FIXME
             data_dict = copy.deepcopy(self.list_data_dict[i]) # inplace modification following
+            # print("run_kto | Line 485 | data_dict : ", data_dict.keys())
             if self.training_modal == 'image':
                 image_file = data_dict['frame']
                 image_folder = self.data_args.image_folder
@@ -539,13 +541,14 @@ class DPODataset(Dataset):
                 data_dict['video'] = video
                 # print('success video')
             
+            # print("run_kto | Line 540 | data_dict['label'] | data_dict : ", data_dict['label'], data_dict.keys())
             return data_dict
         except Exception as e:
             print(f'Error with {e}, {self.list_data_dict[i]}')
             return self.__getitem__(random.randint(0, self.__len__()-1))
 
 @dataclass
-class DPODataCollator(DPODataCollatorWithPadding):
+class KTODataCollator(DPODataCollatorWithPadding):
     def collate(self, batch):
         # first, pad everything to the same length
         # input_ids, labels = tuple([instance[key] for instance in instances]
@@ -588,17 +591,20 @@ class DPODataCollator(DPODataCollatorWithPadding):
                 #     padded_batch[k] = padded_batch[k].flip(dims=[1])
             else:
                 padded_batch[k] = [ex[k] for ex in batch]
-        for k in ['chosen_input_ids', 'rejected_input_ids']:
+        for k in ['completion_input_ids']:      #### in place of 'chosen_input_ids', 'rejected_input_ids'
             attn_k = k.replace('input_ids', 'attention_mask')
             padded_batch[attn_k] = padded_batch[k].ne(self.tokenizer.pad_token_id)
+
+        # ADD batch["label"] -> List of boolean
+        # print("run_kto | Line 596 | batch['label'] : ", len(batch), batch[0].keys())
+        # print("run_kto | Line 597 | padded_batch : ", padded_batch.keys())      # completion_input_ids, completion_labels, completion_attention_mask
         return padded_batch
 
 
     def tokenize_batch_element(
         self,
         prompt: str,
-        chosen: str,
-        rejected: str,
+        completion: str,
         has_X: str = None
     ) -> Dict:
         """Tokenize a single batch element.
@@ -614,28 +620,26 @@ class DPODataCollator(DPODataCollatorWithPadding):
         # import pdb; pdb.set_trace()
         batch = {}
         
-        chosen_sources = make_conv(prompt, chosen)
-        rejected_sources = make_conv(prompt, rejected)
-        chosen_data_dict = preprocess(
-            [chosen_sources],
+        completion_sources = make_conv(prompt, completion)
+        completion_data_dict = preprocess(
+            [completion_sources],
             self.tokenizer,
             has_X=has_X
         )
         #chosen_data_dict['attention_mask'] = chosen_data_dict["input_ids"].ne(self.tokenizer.pad_token_id)
 
-        rejected_data_dict = preprocess(
-            [rejected_sources],
-            self.tokenizer,
-            has_X=has_X
-        )
+        # rejected_data_dict = preprocess(
+        #     [rejected_sources],
+        #     self.tokenizer,
+        #     has_X=has_X
+        # )
         #rejected_data_dict['attention_mask'] = rejected_data_dict["input_ids"].ne(self.tokenizer.pad_token_id)
 
-        chosen_data_dict = {k: v[0] for k, v in chosen_data_dict.items()}
-        rejected_data_dict = {k: v[0] for k, v in rejected_data_dict.items()}
+        completion_data_dict = {k: v[0] for k, v in completion_data_dict.items()}
+        # rejected_data_dict = {k: v[0] for k, v in rejected_data_dict.items()}
 
         for k, toks in {
-            "chosen": chosen_data_dict,
-            "rejected": rejected_data_dict,
+            "completion": completion_data_dict
         }.items():
             for type_key, tokens in toks.items():
                 if type_key == "token_type_ids":
@@ -648,28 +652,44 @@ class DPODataCollator(DPODataCollatorWithPadding):
         Xs, keys = [], []
         for feature in features:
             prompt = feature["prompt"]
-            chosen = feature["chosen"]
-            rejected = feature["rejected"]
+            completion = feature["completion"]
             has_X = feature['has_X']
             Xs.append(feature[has_X])
             keys.append(has_X)
              
-            batch_element = self.tokenize_batch_element(prompt, chosen, rejected, has_X=has_X)
+            batch_element = self.tokenize_batch_element(prompt, completion, has_X=has_X)
             tokenized_batch.append(batch_element)
 
         # return collated batch
         padded_batch =  self.collate(tokenized_batch)
         padded_batch['images'] = [Xs, keys]  # we do not change the key's name.
+        padded_batch['label'] = [feature['label'] for feature in features]
+        # print("run_kto | Line 664 | padded_batch['label] : ", padded_batch['label'], padded_batch.keys())
         return padded_batch
 
-
-def make_dpo_data_module(tokenizer: transformers.PreTrainedTokenizer,
+def make_kto_data_module(tokenizer: transformers.PreTrainedTokenizer,
                                 data_args) -> Dict:
     """Make dataset and collator for supervised fine-tuning."""
-    train_dataset = DPODataset(tokenizer=tokenizer,
+    ###################
+    # TODO: FIX THIS ([:10]) !!!!!!!!!!!!!
+    data_args.num_sample = 5000
+    print(data_args.num_sample)
+    ###################
+    
+    train_dataset = KTODataset(tokenizer=tokenizer,
                                 data_path=data_args.data_path,
                                 data_args=data_args)
-    return train_dataset
+    
+    print("Converting Pytorch dataset to generator ...")
+    
+    def data_generator():
+        for item in train_dataset:         
+            yield item
+    
+    print("Converting generator to HFDataset ...")
+    
+    train_hf_dataset = HFDataset.from_generator(data_generator)
+    return train_hf_dataset
     # data_collator = DataCollatorForDPODataset(tokenizer=tokenizer)
     # return dict(train_dataset=train_dataset,
     #             eval_dataset=None,
@@ -679,8 +699,12 @@ def make_dpo_data_module(tokenizer: transformers.PreTrainedTokenizer,
 def train(attn_implementation):
     global local_rank
     parser = transformers.HfArgumentParser(
-        (ModelArguments, DataArguments, TrainingArguments))
+        (ModelArguments, DataArguments, TrainingArguments))   # (ModelArguments, DataArguments, TrainingArguments)
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    # print(training_args, "\n")
+    # print(model_args, "\n")
+    # print(training_args.bits)       # 16
+    # exit(0)
     local_rank = training_args.local_rank
 
     if training_args.bits in [4, 8]:
@@ -742,6 +766,8 @@ def train(attn_implementation):
                 model.to(torch.float16)
         rank0_print("Adding LoRA adapters...")
         model = get_peft_model(model, lora_config)
+        # print(model)
+        # exit(0)
 
     temp = model_args.model_name_or_path
     # print(type(temp))
@@ -835,13 +861,18 @@ def train(attn_implementation):
     #     p.requires_grad = False
     #################
 
-    train_dataset = make_dpo_data_module(tokenizer=tokenizer,
+    train_dataset = make_kto_data_module(tokenizer=tokenizer,
                                               data_args=data_args)
-    data_collator = DPODataCollator(
-            tokenizer,
+    print(train_dataset)
+    # print(datasets.Dataset.from_list(train_dataset))
+    # exit(0)
+    data_collator = KTODataCollator(
+            tokenizer=tokenizer,
             label_pad_token_id=IGNORE_INDEX,
             pad_token_id=tokenizer.pad_token_id,
         )
+
+    print(data_collator)
 
     # dict(train_dataset=train_dataset,
     #             eval_dataset=None,
@@ -859,18 +890,24 @@ def train(attn_implementation):
 
     # data_collator = data_module['data_collator']
     # train_dataset = data_module['train_dataset']
-    trainer = LLaVADPOTrainer(
+    
+    # print(data_args)
+    # print(type(data_args.video_processor))
+    # print(data_args.video_processor.__dict__)
+    # print(tokenizer.__dict__)
+    # print(training_args)
+    # exit(0)
+    
+    
+    trainer = LLaVAKTOTrainer(
         model,
         args=training_args,
-        dpo_alpha=training_args.dpo_alpha,
-        beta=training_args.beta,
-        gamma=training_args.gamma,
         train_dataset=train_dataset,
         eval_dataset=None,
+        processing_class=tokenizer,
         data_collator=data_collator,
-        tokenizer=tokenizer,
-        max_length=training_args.model_max_length,
-        generate_during_eval=False, #training_args.generate_during_eval,
+        # max_length=training_args.model_max_length,
+        # generate_during_eval=False, #training_args.generate_during_eval,
     )
     trainer.save_my_lora_ckpt = save_my_lora_ckpt
     # trainer = LLaVATrainer(model=model,

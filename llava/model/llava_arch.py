@@ -146,6 +146,7 @@ class LlavaMetaForCausalLM(ABC):
         ]
         '''
         Xs, keys = X_modalities
+        # print("llava_arch | Line 149 | keys : Xs : ", keys, len(Xs))
         all_tower = self.get_all_tower(set(keys)) if len(keys) > 0 else None
         
         # print(2.5)
@@ -162,11 +163,13 @@ class LlavaMetaForCausalLM(ABC):
         #     image_features = [x.flatten(0, 1) for x in image_features]
         # else:
         # print(keys)
-        X_features = [getattr(self, f'encode_{key}s')(X.unsqueeze(0)) for X, key in zip(Xs, keys)]  # expand to get batchsize
+        # for X in Xs:
+            # print("llava_arch | Line 167 | type(X) | len(X[0]) : ", type(X), X.shape, X.dtype)         # (torch.Tensor for DPO, list for KTO!!), 8 [DPO -> List of 8 tensors, each [3,8,224,224], dtype = torch.bfloat16]
+        X_features = [getattr(self, f'encode_{key}s')(X.unsqueeze(0)) for X, key in zip(Xs, keys)]  # expand to get batchsize   (calls self.encode_videos(X.unsqueeze(0)))
         # import pdb; pdb.set_trace()
         # for i, feature in enumerate(X_features):
-        #     X_features[i] = feature[:, :256]
-            # print(X_features[i].shape)
+            # X_features[i] = feature[:, :256]
+            # print("llava_arch | Line 172 | X_features[i].shape : ", X_features[i].shape)        # 1, 2048, 4096
 
         # X_features = []
         # # print(2.5, *[i.shape for i in Xs], keys)  
@@ -185,24 +188,25 @@ class LlavaMetaForCausalLM(ABC):
         #     # print(2.8, out.shape)
         #     X_features.append(out)
         X_features = [x.flatten(0, 1) for x in X_features]
+        # print("llava_arch | Line 191 | X_fe/atures : ", len(X_features), X_features[0].shape)    # 4, [2048, 4096]
         # print([[j, i.shape] for i, j in zip(X_features, keys)])
-
 
         new_input_embeds = []
         new_labels = [] if labels is not None else None
         cur_X_idx = 0
         # print(2.9, input_ids.shape)
         for batch_idx, cur_input_ids in enumerate(input_ids):
-            # print(333333)
+            # print(333333) *********** if the current input does not have any multimodal input [NOT NEEDED FOR US]
+            # print("LLAVA_ARCH | Line 201 | cur_input_ids : ", cur_input_ids.shape)      # 112
             if (torch.any(torch.stack([cur_input_ids == X_TOKEN_INDEX[key.upper()] for key in keys]), dim=0)).sum() == 0:
                 # multimodal LLM, but the current sample is not multimodal
                 # MARK: Text only
                 # FIXME: this is a hacky fix, for deepspeed zero3 to work
-                half_len = cur_input_ids.shape[0] // 2
+                half_len = cur_input_ids.shape[0] // 2          # divide the text input (input ids) into two halves
                 cur_X_features = X_features[cur_X_idx]
                 cur_input_embeds_1 = self.get_model().embed_tokens(cur_input_ids[:half_len])
                 cur_input_embeds_2 = self.get_model().embed_tokens(cur_input_ids[half_len:])
-                cur_input_embeds = torch.cat([cur_input_embeds_1, cur_X_features[0:0], cur_input_embeds_2], dim=0)
+                cur_input_embeds = torch.cat([cur_input_embeds_1, cur_X_features[0:0], cur_input_embeds_2], dim=0)  # insert an empty image tensor in the middle of both halves for code to work
                 new_input_embeds.append(cur_input_embeds)
                 if labels is not None:
                     new_labels.append(labels[batch_idx])
@@ -211,16 +215,18 @@ class LlavaMetaForCausalLM(ABC):
                 ###### 一个text对应视频和图片，直接走下边了。只有1个text，传入none或者1个/2个全zero都无所谓，反正没有下一个数据了。
                 continue
             X_token_indices = torch.where(torch.any(torch.stack([cur_input_ids == X_TOKEN_INDEX[key.upper()] for key in keys]), dim=0))[0]  # 把中间的imgtoken的位置找到
+            # print("llava_arch | Line 220 | X_token_indices : ", X_token_indices)        # 35
             cur_new_input_embeds = []
             if labels is not None:
                 cur_labels = labels[batch_idx]
                 cur_new_labels = []
                 assert cur_labels.shape == cur_input_ids.shape
+                # print("llava_arch | Line 226 | cur_labels : ", cur_labels.shape)        # List of 112 tokens starting with -100 (label_pad_token_id)
             # print(4444444444)
             while X_token_indices.numel() > 0:
-                cur_X_features = X_features[cur_X_idx]
+                cur_X_features = X_features[cur_X_idx]      # 2048, 4096 (Features of the video of current batch)
                 X_token_start = X_token_indices[0]
-                if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_x_start_end', False):
+                if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_x_start_end', False):    
                     cur_new_input_embeds.append(self.get_model().embed_tokens(cur_input_ids[:X_token_start-1]).detach())
                     cur_new_input_embeds.append(self.get_model().embed_tokens(cur_input_ids[X_token_start-1:X_token_start]))
                     cur_new_input_embeds.append(cur_X_features)
@@ -231,35 +237,48 @@ class LlavaMetaForCausalLM(ABC):
                         cur_new_labels.append(cur_labels[X_token_start:X_token_start+1])
                         cur_labels = cur_labels[X_token_start+2:]
                 else:
+                    # print("llava_arch | Line 242 | Inside other if block")      # RELEVANT FOR DPO, KTO
                     cur_new_input_embeds.append(self.get_model().embed_tokens(cur_input_ids[:X_token_start]))  # imgtoken之前的text拿出来，好像都是模板套话
                     cur_new_input_embeds.append(cur_X_features)
                     if labels is not None:
                         cur_new_labels.append(cur_labels[:X_token_start])
                         cur_new_labels.append(torch.full((cur_X_features.shape[0],), IGNORE_INDEX, device=labels.device, dtype=labels.dtype))
+                        # print("llava_arch | Line 248 | cur_new_labels : ", [x.shape for x in cur_new_labels])
                         cur_labels = cur_labels[X_token_start+1:]
                 cur_X_idx += 1
                 if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_x_start_end', False):
-                    cur_input_ids = cur_input_ids[X_token_start+2:]
+                    cur_input_ids = cur_input_ids[X_token_start+2:]     # Once image token is found and processed, the text after it is the next part to be procesed (For multi-turn convos, can have multiple X tokens in this sequence.)
                 else:
-                    cur_input_ids = cur_input_ids[X_token_start+1:]   # imgtoken之后的text拿出来，是真的question
-                X_token_indices = torch.where(torch.any(torch.stack([cur_input_ids == X_TOKEN_INDEX[key.upper()] for key in keys]), dim=0))[0]
+                    cur_input_ids = cur_input_ids[X_token_start+1:]   # imgtoken之后的text拿出来，是真的question (Text after image token is the real question)
+                X_token_indices = torch.where(torch.any(torch.stack([cur_input_ids == X_TOKEN_INDEX[key.upper()] for key in keys]), dim=0))[0]  # get the remaining set of imgtokens from remaining sequence (if single multimodal input, won't have any more imgtokens)
             
             # print(55555555555555555)
-            if cur_input_ids.numel() > 0:
+            # print("llava_arch | Line 257 | cur_new_input_embeds : ", len(cur_new_input_embeds))        # 2
+            # print("llava_arch | Line 257 | cur_input_ids : ", cur_input_ids.shape)        # 76
+            
+            if cur_input_ids.numel() > 0:   # Check for remaining text after all imgtokens are processed and embed each token, add to curr_new_input_embeds
                 if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_x_start_end', False):
                     cur_new_input_embeds.append(self.get_model().embed_tokens(cur_input_ids).detach())
                 else:
                     cur_new_input_embeds.append(self.get_model().embed_tokens(cur_input_ids))
                 if labels is not None:
                     cur_new_labels.append(cur_labels)
+                    # print("llava_arch | Line 268 | cur_new_labels : ", [x.shape for x in cur_new_labels])
             cur_new_input_embeds = [x.to(device=self.device) for x in cur_new_input_embeds]  # 前面text+图片+后面question
+            # print("llava_arch | Line 266 | cur_new_input_embeds : ", [x.shape for x in cur_new_input_embeds])        # 3, [35,4096], [2048,4096], [76,4096]
             cur_new_input_embeds = torch.cat(cur_new_input_embeds, dim=0)
+            # print("llava_arch | Line 266 | cur_new_input_embeds : ", cur_new_input_embeds.shape)        # 2159, 4096
             new_input_embeds.append(cur_new_input_embeds)
             if labels is not None:
                 cur_new_labels = torch.cat(cur_new_labels, dim=0)
+                # print("llava_arch | Line 275 | cur_new_labels : ", cur_new_labels.shape)
                 new_labels.append(cur_new_labels)
+                
+        # print("llava_arch | Line 279 | new_input_embeds : ", len(new_input_embeds))        # 4
+        # print("llava_arch | Line 280 | cur_new_labels : ", cur_new_labels.shape)           # 2159 for DPO
 
         if any(x.shape != new_input_embeds[0].shape for x in new_input_embeds):
+            # print([x.shape for x in new_input_embeds])
             max_len = max(x.shape[0] for x in new_input_embeds)
 
             new_input_embeds_align = []
@@ -295,6 +314,7 @@ class LlavaMetaForCausalLM(ABC):
                 attention_mask = torch.cat((new_attn_mask_pad_left, attention_mask), dim=1)
                 assert attention_mask.shape == new_input_embeds.shape[:2]
 
+        # print("llava_arch | Line 301 | new_input_embeds | new_labels : ", new_input_embeds.shape, new_labels.shape)     # 4, 2159, 4096 | 4, 2159 for both KTO, DPO!! Where is the problem then for KTO?
         return None, attention_mask, past_key_values, new_input_embeds, new_labels
 
     def initialize_X_tokenizer(self, model_args, tokenizer):

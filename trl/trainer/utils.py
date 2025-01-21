@@ -18,12 +18,13 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import pandas as pd
 import torch
 from accelerate import PartialState
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset
 from transformers import BitsAndBytesConfig, DataCollatorForLanguageModeling, PreTrainedTokenizerBase
-
+from huggingface_hub import ModelCard, ModelCardData
 from ..import_utils import is_peft_available, is_unsloth_available, is_xpu_available
 from ..trainer.model_config import ModelConfig
 
@@ -288,24 +289,26 @@ class RewardDataCollatorWithPadding:
 class DPODataCollatorWithPadding:
     r"""
     DPO DataCollator class that pads the tokenized inputs to the maximum length of the batch.
+
     Args:
         pad_token_id (`int` defaults to 0):
             The tokenizer's pad_token_id.
         label_pad_token_id (`int`, defaults to -100):
             The label used for masking.
-        is_encoder_decoder (`Optional[bool]`, `optional`, defaults to `None`):
-            Whether or not you model has an encoder_decoder architecture.
+        is_encoder_decoder (`bool` or `None`, `optional`, defaults to `None`):
+            Whether you model has an encoder_decoder architecture.
     """
-    tokenizer: PreTrainedTokenizerBase
+
+    tokenizer: PreTrainedTokenizerBase = None
     pad_token_id: int = 0
     label_pad_token_id: int = -100
     is_encoder_decoder: Optional[bool] = False
 
-    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def __call__(self, features: list[dict[str, Any]]) -> dict[str, Any]:
         # first, pad everything to the same length
         padded_batch = {}
         for k in features[0].keys():
-            if k.endswith("_input_ids") or k.endswith("_attention_mask") or k.endswith("_labels"):
+            if k.endswith(("_input_ids", "_attention_mask", "_labels", "_pixel_values")):
                 if self.is_encoder_decoder:
                     to_pad = [torch.LongTensor(ex[k]) for ex in features]
 
@@ -319,17 +322,13 @@ class DPODataCollatorWithPadding:
                         padding_value = self.pad_token_id
                     elif k.endswith("_attention_mask"):
                         padding_value = 0
-                    elif (k.startswith("chosen")) or (k.startswith("rejected")) or ("decoder" in k):
+                    elif k.startswith(("chosen", "rejected", "completion")) or ("decoder" in k):
                         padding_value = self.label_pad_token_id
                     else:
                         raise ValueError(f"Unexpected key in batch '{k}'")
                     padded_batch[k] = pad_sequence(to_pad, batch_first=True, padding_value=padding_value)
                 else:
-                    # adapted from https://stackoverflow.com/questions/73256206
-                    if "prompt" in k:
-                        to_pad = [torch.LongTensor(ex[k][::-1]) for ex in features]
-                    else:
-                        to_pad = [torch.LongTensor(ex[k]) for ex in features]
+                    # Set padding value based on the key
                     if k.endswith("_input_ids"):
                         if self.pad_token_id is None:
                             raise ValueError(
@@ -342,13 +341,26 @@ class DPODataCollatorWithPadding:
                         padding_value = self.label_pad_token_id
                     elif k.endswith("_attention_mask"):
                         padding_value = 0
+                    elif k.endswith("_pixel_values"):
+                        padding_value = 0  # TODO: check if this is correct
                     else:
                         raise ValueError(f"Unexpected key in batch '{k}'")
 
-                    padded_batch[k] = pad_sequence(to_pad, batch_first=True, padding_value=padding_value)
-                    # for the prompt, flip back so padding is on left side
-                    if "prompt" in k:
-                        padded_batch[k] = padded_batch[k].flip(dims=[1])
+                    # Set padding side based on the key
+                    if k in ["prompt_input_ids", "prompt_attention_mask"]:
+                        padding_side = "left"
+                    else:
+                        padding_side = "right"
+
+                    # Set the dtype
+                    if k.endswith("_pixel_values"):
+                        dtype = torch.float32  # will be downcasted if necessary by the Trainer
+                    else:
+                        dtype = torch.int64
+
+                    # Convert to tensor and pad
+                    to_pad = [torch.tensor(ex[k], dtype=dtype) for ex in features]
+                    padded_batch[k] = pad(to_pad, padding_value=padding_value, padding_side=padding_side)
             elif k.endswith("_logps"):
                 # the cached reference model logprobs
                 padded_batch[k] = torch.tensor([ex[k] for ex in features])
@@ -356,6 +368,81 @@ class DPODataCollatorWithPadding:
                 padded_batch[k] = [ex[k] for ex in features]
 
         return padded_batch
+
+
+# (old)
+# @dataclass
+# class DPODataCollatorWithPadding:
+#     r"""
+#     DPO DataCollator class that pads the tokenized inputs to the maximum length of the batch.
+#     Args:
+#         pad_token_id (`int` defaults to 0):
+#             The tokenizer's pad_token_id.
+#         label_pad_token_id (`int`, defaults to -100):
+#             The label used for masking.
+#         is_encoder_decoder (`Optional[bool]`, `optional`, defaults to `None`):
+#             Whether or not you model has an encoder_decoder architecture.
+#     """
+#     tokenizer: PreTrainedTokenizerBase
+#     pad_token_id: int = 0
+#     label_pad_token_id: int = -100
+#     is_encoder_decoder: Optional[bool] = False
+
+#     def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, Any]:
+#         # first, pad everything to the same length
+#         padded_batch = {}
+#         for k in features[0].keys():
+#             if k.endswith("_input_ids") or k.endswith("_attention_mask") or k.endswith("_labels"):
+#                 if self.is_encoder_decoder:
+#                     to_pad = [torch.LongTensor(ex[k]) for ex in features]
+
+#                     if (k.startswith("prompt")) and (k.endswith("input_ids")):
+#                         if self.pad_token_id is None:
+#                             raise ValueError(
+#                                 "Padding is enabled, but the tokenizer is not configured with a padding token."
+#                                 " Explicitly set `tokenizer.pad_token` (e.g. `tokenizer.pad_token = tokenizer.eos_token`)"
+#                                 " before calling the trainer."
+#                             )
+#                         padding_value = self.pad_token_id
+#                     elif k.endswith("_attention_mask"):
+#                         padding_value = 0
+#                     elif (k.startswith("chosen")) or (k.startswith("rejected")) or ("decoder" in k):
+#                         padding_value = self.label_pad_token_id
+#                     else:
+#                         raise ValueError(f"Unexpected key in batch '{k}'")
+#                     padded_batch[k] = pad_sequence(to_pad, batch_first=True, padding_value=padding_value)
+#                 else:
+#                     # adapted from https://stackoverflow.com/questions/73256206
+#                     if "prompt" in k:
+#                         to_pad = [torch.LongTensor(ex[k][::-1]) for ex in features]
+#                     else:
+#                         to_pad = [torch.LongTensor(ex[k]) for ex in features]
+#                     if k.endswith("_input_ids"):
+#                         if self.pad_token_id is None:
+#                             raise ValueError(
+#                                 "Padding is enabled, but the tokenizer is not configured with a padding token."
+#                                 " Explicitly set `tokenizer.pad_token` (e.g. `tokenizer.pad_token = tokenizer.eos_token`)"
+#                                 " before calling the trainer."
+#                             )
+#                         padding_value = self.pad_token_id
+#                     elif k.endswith("_labels"):
+#                         padding_value = self.label_pad_token_id
+#                     elif k.endswith("_attention_mask"):
+#                         padding_value = 0
+#                     else:
+#                         raise ValueError(f"Unexpected key in batch '{k}'")
+
+#                     padded_batch[k] = pad_sequence(to_pad, batch_first=True, padding_value=padding_value)
+#                     # for the prompt, flip back so padding is on left side
+#                     if "prompt" in k:
+#                         padded_batch[k] = padded_batch[k].flip(dims=[1])
+#             elif k.endswith("_logps"):
+#                 # the cached reference model logprobs
+#                 padded_batch[k] = torch.tensor([ex[k] for ex in features])
+#             else:
+#                 padded_batch[k] = [ex[k] for ex in features]
+
+#         return padded_batch
 
 
 class ConstantLengthDataset(IterableDataset):
@@ -726,3 +813,107 @@ def get_peft_config(model_config: ModelConfig) -> "Optional[PeftConfig]":
     )
 
     return peft_config
+
+# added this function from newer version
+def generate_model_card(
+    base_model: Optional[str],
+    model_name: str,
+    hub_model_id: str,
+    dataset_name: Optional[str],
+    tags: list[str],
+    wandb_url: Optional[str],
+    trainer_name: str,
+    trainer_citation: Optional[str] = None,
+    paper_title: Optional[str] = None,
+    paper_id: Optional[str] = None,
+    comet_url: Optional[str] = None,
+) -> ModelCard:
+    """
+    Generate a `ModelCard` from a template.
+
+    Args:
+        base_model (`str` or `None`):
+            Base model name.
+        model_name (`str`):
+            Model name.
+        hub_model_id (`str`):
+            Hub model ID as `username/model_id`.
+        dataset_name (`str` or `None`):
+            Dataset name.
+        tags (`list[str]`):
+            Tags.
+        wandb_url (`str` or `None`):
+            Weights & Biases run URL.
+        comet_url (`str` or `None`):
+            Comet experiment URL.
+        trainer_name (`str`):
+            Trainer name.
+        trainer_citation (`str` or `None`, defaults to `None`):
+            Trainer citation as a BibTeX entry.
+        paper_title (`str` or `None`, defaults to `None`):
+            Paper title.
+        paper_id (`str` or `None`, defaults to `None`):
+            ArXiv paper ID as `YYMM.NNNNN`.
+
+    Returns:
+        `ModelCard`:
+            A ModelCard object.
+    """
+    card_data = ModelCardData(
+        base_model=base_model,
+        datasets=dataset_name,
+        library_name="transformers",
+        licence="license",
+        model_name=model_name,
+        tags=["generated_from_trainer", *tags],
+    )
+    card = ModelCard.from_template(
+        card_data,
+        template_path=str(pkg_resources.files("trl").joinpath("templates/lm_model_card.md")),
+        base_model=base_model,
+        model_name=model_name,
+        hub_model_id=hub_model_id,
+        dataset_name=dataset_name,
+        wandb_url=wandb_url,
+        comet_url=comet_url,
+        trainer_name=trainer_name,
+        trainer_citation=trainer_citation,
+        paper_title=paper_title,
+        paper_id=paper_id,
+        trl_version=version("trl"),
+        transformers_version=version("transformers"),
+        pytorch_version=version("torch"),
+        datasets_version=version("datasets"),
+        tokenizers_version=version("tokenizers"),
+    )
+    return card
+
+def get_comet_experiment_url() -> Optional[str]:
+    """
+    If Comet integration is enabled, return the URL of the current Comet experiment; otherwise, return `None`.
+    """
+    if not is_comet_available():
+        return None
+
+    if comet_ml.get_running_experiment() is not None:
+        return comet_ml.get_running_experiment().url
+
+    return None
+
+
+def log_table_to_comet_experiment(name: str, table: pd.DataFrame) -> None:
+    """
+    If Comet integration is enabled logs a table to the Comet experiment if it is currently running.
+
+    Args:
+        name (`str`):
+            Table name.
+        table (`pd.DataFrame`):
+            The Pandas DataFrame containing the table to log.
+    """
+    if not is_comet_available():
+        raise ModuleNotFoundError("The comet-ml is not installed. Please install it first: pip install comet-ml")
+
+    experiment = comet_ml.get_running_experiment()
+    if experiment is not None:
+        experiment.log_table(tabular_data=table, filename=name)

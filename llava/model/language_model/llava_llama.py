@@ -73,10 +73,12 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         # print(222222222222222222222222222222222222222222222)
+        # print("llava_llama | Line 76 | images : ", images[1], len(images[0]))
         input_ids, attention_mask, past_key_values, inputs_embeds, labels = self.prepare_inputs_labels_for_multimodal(input_ids, attention_mask, past_key_values, labels, images)
         # input_ids已经没了，因为text已经融合到inputs_embeds里面：前text+img+后text，总共大几百个token
         # 之后的input_ids是上一轮预测得token，图片和之前得文本信息融到past_key_values
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
+        # print("llava_llama | Line 81 | inputs_embeds | labels : ", inputs_embeds.shape, labels.shape)
         
         # print(66666666666666666666666)
         outputs = self.model(
@@ -93,7 +95,9 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
         # print(777777777)
         hidden_states = outputs[0]
         logits = self.lm_head(hidden_states)
+        print("llava_llama | logits : ", logits.shape)      # B, 2159, Vocab size
         if dpo_forward:
+            print("llava_llama | dpo_forward : ", dpo_forward)      # True for DPO, None for KTO - Is this the pain point??
             return logits, labels
         # print(88888888888888)
         loss = None

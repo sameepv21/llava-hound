@@ -835,6 +835,9 @@ class DPOTrainer(Trainer):
             concatenated_batch["concatenated_attention_mask"] = (
                 batch["prompt_attention_mask"].repeat(2, 1).to(device=device)
             )
+            
+        print("dpo_trainer | Line 839 | batch['images'][1] : ", batch["images"][1])
+        print("dpo_trainer | Line 840 | len(batch['images'][0]) : ", len(batch["images"][0]))
         repeated_list = [
             batch['images'][0] * 2,
             batch['images'][1] * 2                                
@@ -943,6 +946,7 @@ class DPOTrainer(Trainer):
         Returns:
             A tensor of shape (batch_size,) containing the average/sum log probabilities of the given labels under the given logits.
         """
+        print("Line 1021 | dpo_trainer | logits.shape and labels.shape : ", logits.shape, labels.shape)
         if logits.shape[:-1] != labels.shape:
             raise ValueError("Logits (batch and sequence length dim) and labels must have the same shape.")
 
@@ -989,6 +993,14 @@ class DPOTrainer(Trainer):
             device=self.accelerator.device,
         )
         len_chosen = batch["chosen_labels"].shape[0]
+        
+        print(len(concatenated_batch["concatenated_images"]))           # Nested list -> 2(concat),[8(Batch size),3(#Channels),8(Frames),224(H),224(W)]
+        print(len(concatenated_batch["concatenated_images"][0]))
+        print(len(concatenated_batch["concatenated_images"][0][0]))
+        print(len(concatenated_batch["concatenated_images"][0][0][0]))
+        print(len(concatenated_batch["concatenated_images"][0][0][0][0]))
+        print(len(concatenated_batch["concatenated_images"][0][0][0][0][0]))
+        # exit(0)
 
         all_logits, new_labels = model(
             concatenated_batch["concatenated_input_ids"],
@@ -996,12 +1008,13 @@ class DPOTrainer(Trainer):
             labels=concatenated_batch["concatenated_labels"],
             images=concatenated_batch["concatenated_images"],
             use_cache=False,
-            dpo_forward=True,
+            dpo_forward=True,       # IS THIS IT ?!!
         )
+        print("dpo_trainer | all_logits | new_labels : ", all_logits.shape, new_labels.shape)
         all_logits = all_logits.to(torch.float32)
         all_logps = self.get_batch_logps(
             all_logits,
-            new_labels,
+            new_labels,         # NOTE : Here, new_labels (with extra IGNORE_INDEX tokens) is passed to model instead of original labels since that would have different dimensions
             average_log_prob=self.loss_type == "ipo",
             is_encoder_decoder=self.is_encoder_decoder,
             label_pad_token_id=self.label_pad_token_id,
