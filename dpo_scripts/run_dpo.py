@@ -43,6 +43,8 @@ from trl.trainer.utils import DPODataCollatorWithPadding
 
 from PIL import Image
 
+from llava.model.multimodal_encoder.languagebind import LanguageBindImageTower, LanguageBindVideoTower
+
 
 local_rank = None
 
@@ -687,11 +689,12 @@ def train(attn_implementation):
         raise NotImplementedError("Quantization is not supported yet.")
     
     if model_args.image_tower is not None or model_args.video_tower is not None:  ###################################################
-        model = LlavaLlamaForCausalLM.from_pretrained(
+        model = transformers.AutoModelForCausalLM.from_pretrained(
             model_args.model_name_or_path,
             cache_dir=training_args.cache_dir,
             attn_implementation=attn_implementation,
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
+            trust_remote_code=True,
         )
     else:
         model = transformers.LlamaForCausalLM.from_pretrained(
@@ -769,13 +772,14 @@ def train(attn_implementation):
 
     if model_args.image_tower is not None or model_args.video_tower is not None:  #############################
         if model_args.image_tower is not None:
-            image_tower = model.get_image_tower()
-            if image_tower is None:
-                model.get_model().initialize_image_modules(
-                    model_args=model_args,
-                    fsdp=training_args.fsdp
-                )
-                image_tower = model.get_image_tower()
+            image_tower = LanguageBindImageTower(model_args.image_tower, args=model_args)
+            # image_tower = model.get_image_tower()
+            # if image_tower is None:
+            #     model.get_model().initialize_image_modules(
+            #         model_args=model_args,
+            #         fsdp=training_args.fsdp
+            #     )
+            #     image_tower = model.get_image_tower()
             if not image_tower.is_loaded:
                 # print('load image tower')
                 image_tower.load_model()
@@ -788,13 +792,14 @@ def train(attn_implementation):
             model.config.image_grid_pinpoints = data_args.image_grid_pinpoints
 
         if model_args.video_tower is not None:
-            video_tower = model.get_video_tower()
-            if video_tower is None:
-                model.get_model().initialize_video_modules(
-                    model_args=model_args,
-                    fsdp=training_args.fsdp
-                )
-                video_tower = model.get_video_tower()
+            video_tower = LanguageBindVideoTower(model_args.video_tower, args=model_args)
+            # video_tower = model.get_video_tower()
+            # if video_tower is None:
+            #     model.get_model().initialize_video_modules(
+            #         model_args=model_args,
+            #         fsdp=training_args.fsdp
+            #     )
+            #     video_tower = model.get_video_tower()
             if not video_tower.is_loaded:
                 # print('load video tower')
                 video_tower.load_model()
@@ -820,7 +825,7 @@ def train(attn_implementation):
         model.config.mm_use_x_start_end = data_args.mm_use_x_start_end = model_args.mm_use_x_start_end
         training_args.use_x_start_end = model_args.mm_use_x_start_end
         model.config.mm_use_x_patch_token = model_args.mm_use_x_patch_token
-        model.initialize_X_tokenizer(model_args, tokenizer=tokenizer)
+        # model.initialize_X_tokenizer(model_args, tokenizer=tokenizer)
 
     ###################
     # for p in model.get_model().layers.parameters():
