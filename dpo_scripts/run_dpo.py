@@ -324,6 +324,8 @@ def preprocess_v1(
     # Mask targets
     sep = conv.sep + conv.roles[1] + ": "
     for conversation, target in zip(conversations, targets):
+        if tokenizer.pad_token_id == None:
+            tokenizer.pad_token_id = tokenizer.eos_token_id
         total_len = int(target.ne(tokenizer.pad_token_id).sum())
 
         rounds = conversation.split(conv.sep2)
@@ -575,6 +577,9 @@ class DPODataCollator(DPODataCollatorWithPadding):
                 to_pad = [torch.LongTensor(ex[k]) for ex in batch]
                 if k.endswith("_input_ids"):
                     padding_value = self.tokenizer.pad_token_id
+                    if self.tokenizer.pad_token_id == None:
+                        padding_value = self.tokenizer.eos_token_id
+                        self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
                 elif k.endswith("_labels"):
                     padding_value = self.label_pad_token_id
                 else:
@@ -592,6 +597,7 @@ class DPODataCollator(DPODataCollatorWithPadding):
                 padded_batch[k] = [ex[k] for ex in batch]
         for k in ['chosen_input_ids', 'rejected_input_ids']:
             attn_k = k.replace('input_ids', 'attention_mask')
+
             padded_batch[attn_k] = padded_batch[k].ne(self.tokenizer.pad_token_id)
         return padded_batch
 
@@ -696,6 +702,9 @@ def train(attn_implementation):
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
             trust_remote_code=True,
         )
+
+        model = model.to(device=training_args.device)
+
     else:
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,

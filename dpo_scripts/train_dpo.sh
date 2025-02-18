@@ -36,7 +36,7 @@ torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_dpo \
     --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
     --model_name_or_path $model_name_or_path \
     --dpo_alpha 1.0 --beta 0.1 --gamma 0 \
-    --version v1 \
+    --version plain \
     --data_path $data_path \
     --video_folder $video_dir \
     --image_folder $image_dir \
