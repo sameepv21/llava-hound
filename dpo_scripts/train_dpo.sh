@@ -1,5 +1,5 @@
 input_model_name=${1:-"ShareGPTVideo/LLaVA-Hound-SFT"}
-output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/scaled_temporal_infused_dpo_v1"}
+output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/llavahound"}
 lr=${3:-"5e-7"}
 
 cache_dir=/home/cr8dl-user/.cache
@@ -10,7 +10,7 @@ export WANDB_PROJECT=llava-hound
 export WANDB_NAME=scaled_temporal_dpo_v1
 
 # gpu_ids=0
-gpu_ids=0,1,2,3,4
+gpu_ids=3,4,5,6,7
 export CUDA_VISIBLE_DEVICES=$gpu_ids
 n_gpu=$(echo $gpu_ids | tr "," "\n" | wc -l)
 echo "Using $n_gpu GPUs: $gpu_ids"
@@ -20,13 +20,13 @@ output_dir=$output_model_name
 mkdir -p $output_dir
 
 # DATA
-data_path=/home/cr8dl-user/sameep/datasets/llava-hound/temporal_infused_good.json
+data_path=/home/cr8dl-user/sameep/datasets/timewarp/timewarp_30k_frames.json
 
-video_dir=/home/cr8dl-user/sameep/datasets/llava-hound/
+video_dir=/home/cr8dl-user/sameep/datasets/timewarp
 image_dir="/"
 
 # sudo chmod +x -R .
-export PYTHONPATH="/home/cr8dl-user/sameep/Video-LLMs/llava-hound/venv/bin/python"
+export PYTHONPATH="/home/cr8dl-user/arpit/miniforge3/envs/llavahound/bin/python"
 rand=$RANDOM
 port=$((19000 + $rand % 1000))
 
@@ -51,7 +51,7 @@ torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_dpo \
     --group_by_modality_length False \
     --bf16 True \
     --output_dir $output_dir \
-    --num_train_epochs 15 \
+    --num_train_epochs 3 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 4 \

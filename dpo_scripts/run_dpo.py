@@ -693,6 +693,9 @@ def train(attn_implementation):
             attn_implementation=attn_implementation,
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
         )
+
+        model = model.to(device=training_args.device)
+
     else:
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
