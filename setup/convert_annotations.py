@@ -26,7 +26,7 @@ CHANGE THE CODE ACCORDING TO EVERY ANNOTATION THAT YOU WANT TO EVAL
 for index, entry in enumerate(tqdm(data)):
     new_dicts.append({
         "id": entry['id'],
-        "video": "frames/" + entry['video_id'].split('/')[-1], # Take the last entry
+        "video": "frames_concated/" + entry['video_id'].split('/')[-1], # Take the last entry
         "conversations": [
             {
                 "from": "human",
@@ -39,6 +39,6 @@ for index, entry in enumerate(tqdm(data)):
         ]
     })
 
-with open(os.path.join(args.save_dir, 'tvbench_lh.json'), 'w') as f:
+with open(os.path.join(args.save_dir, 'vinoground_video_lh.json'), 'w') as f:
     json.dump(new_dicts, f)
 
