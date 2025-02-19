@@ -3,11 +3,11 @@ model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
 load_peft=/home/cr8dl-user/sameep/experiments/checkpoints_backup/dpob
 
-data_name=vinoground
-TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/vinoground
+data_name=tempcompass
+TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/TempCompass
 TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/${output_model_name}
 
-data_path=$TEST_DATA_DIR/vinoground_video_lh.json
+data_path=$TEST_DATA_DIR/cm_tempcompass_lh.json
 output_path=$TEST_RESULT_DIR/${data_name}/inference_test_official
 
 cache_dir=/home/cr8dl-user/.cache
