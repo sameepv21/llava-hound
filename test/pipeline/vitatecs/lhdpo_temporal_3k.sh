@@ -1,13 +1,13 @@
-output_model_name=llava-hound-sft
+output_model_name=llava-hound-dpo-temporal-3k
 model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
-load_peft="None"
+load_peft=/home/cr8dl-user/sameep/experiments/checkpoints_backup/llava-hound-tw-3k
 
-data_name=tvbench
-TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/tvbench
+data_name=vitatecs
+TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/vitatecs
 TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/${output_model_name}
 
-data_path=$TEST_DATA_DIR/tvbench_lh.json
+data_path=$TEST_DATA_DIR/vitatecs_lh.json
 output_path=$TEST_RESULT_DIR/${data_name}/inference_test_official
 
 cache_dir=/home/cr8dl-user/.cache
