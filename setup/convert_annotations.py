@@ -23,21 +23,44 @@ new_dicts = []
 CHANGE THE CODE ACCORDING TO EVERY ANNOTATION THAT YOU WANT TO EVAL
 """
 
-for index, entry in enumerate(tqdm(data)):
-    new_dicts.append({
-        "id": entry['id'],
-        "video": "videos/frames/" + entry['video_id'].split('/')[-1], # Take the last entry
-        "conversations": [
-            {
-                "from": "human",
-                "value": "<video>\n" + entry['question'],
-            },
-            {
-                "from": "gpt",
-                "value": entry['answer']
-            }
-        ]
-    })
+counter = 0
 
-with open(os.path.join(args.save_dir, 'vitatecs_lh.json'), 'w') as f:
+for index, entry in enumerate(tqdm(data)):
+
+
+    # THIS IS FOR TEMPCOMPASS BENCHMARK
+    for sub_cat in data[entry]:
+        sub_data = data[entry][sub_cat]
+        for qa in sub_data:
+            new_dicts.append({
+                "id": entry + "_" + str(counter),
+                "video": "frames/" + entry,
+                "conversations": [
+                    {
+                        "from": "human",
+                        "value": "<video>\n" + qa['question'],
+                    },
+                    {
+                        "from": "gpt",
+                        "value": qa['answer']
+                    }
+                ]
+            })
+            counter += 1
+    # new_dicts.append({
+    #     "id": entry['id'],
+    #     "video": "videos/frames/" + entry['video_id'].split('/')[-1], # Take the last entry
+    #     "conversations": [
+    #         {
+    #             "from": "human",
+    #             "value": "<video>\n" + entry['question'],
+    #         },
+    #         {
+    #             "from": "gpt",
+    #             "value": entry['answer']
+    #         }
+    #     ]
+    # })
+
+with open(os.path.join(args.save_dir, 'mcq_tempcompass_lh.json'), 'w') as f:
     json.dump(new_dicts, f)
