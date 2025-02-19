@@ -19,10 +19,14 @@ with open(os.path.join(args.root_dir, args.json_filename), 'r') as f:
 # pprint(data[0])
 new_dicts = []
 
+"""
+CHANGE THE CODE ACCORDING TO EVERY ANNOTATION THAT YOU WANT TO EVAL
+"""
+
 for index, entry in enumerate(tqdm(data)):
     new_dicts.append({
-        "id": entry['id'].replace(".mp4", "") + "_" + str(index),
-        "video": entry['id'].replace(".mp4", ""),
+        "id": entry['id'],
+        "video": "frames/" + entry['video_id'].split('/')[-1], # Take the last entry
         "conversations": [
             {
                 "from": "human",
@@ -35,6 +39,6 @@ for index, entry in enumerate(tqdm(data)):
         ]
     })
 
-with open(os.path.join(args.save_dir, 'temporal_benchmark.json'), 'w') as f:
+with open(os.path.join(args.save_dir, 'tvbench_lh.json'), 'w') as f:
     json.dump(new_dicts, f)
 
