@@ -981,10 +981,6 @@ class DPOTrainer(Trainer):
 
         We do this to avoid doing two forward passes, because it's faster for FSDP.
         """
-
-        if self.padding_value == None:
-            self.padding_value = -100
-
         concatenated_batch = self.concatenated_inputs(
             batch,
             is_encoder_decoder=self.is_encoder_decoder,
@@ -992,6 +988,7 @@ class DPOTrainer(Trainer):
             padding_value=self.padding_value,
             device=self.accelerator.device,
         )
+        
         len_chosen = batch["chosen_labels"].shape[0]
 
         all_logits, new_labels = model(

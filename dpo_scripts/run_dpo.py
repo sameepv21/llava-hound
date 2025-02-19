@@ -304,8 +304,12 @@ def preprocess_v1(
             conv.append_message(role, sentence["value"])
         conversations.append(conv.get_prompt())
 
-    # Tokenize conversations
 
+    # Remove all bos and eos tokens as it is not used by qwen2tokenizer architecture.
+    conversations = [conversation.replace("</s>", "") for conversation in conversations]
+    conversations = [conversation.replace("<s>", "") for conversation in conversations]
+
+    # Tokenize conversations
     if X is not None:
         input_ids = torch.stack([tokenizer_X_token(prompt, tokenizer, X_TOKEN_INDEX[X], return_tensors='pt') for prompt in conversations], dim=0)
     else:
@@ -329,7 +333,7 @@ def preprocess_v1(
         total_len = int(target.ne(tokenizer.pad_token_id).sum())
 
         rounds = conversation.split(conv.sep2)
-        cur_len = 1
+        cur_len = 0
         target[:cur_len] = IGNORE_INDEX
         for i, rou in enumerate(rounds):
             if rou == "":
@@ -342,7 +346,7 @@ def preprocess_v1(
 
             if X is not None:
                 round_len = len(tokenizer_X_token(rou, tokenizer, X_TOKEN_INDEX[X]))
-                instruction_len = len(tokenizer_X_token(parts[0], tokenizer, X_TOKEN_INDEX[X])) - 2
+                instruction_len = len(tokenizer_X_token(parts[0], tokenizer, X_TOKEN_INDEX[X])) # Changed and do not account for bos and eos. Otherwise subtract 2.
             else:
                 round_len = len(tokenizer(rou).input_ids)
                 instruction_len = len(tokenizer(parts[0]).input_ids) - 2
@@ -522,6 +526,7 @@ class DPODataset(Dataset):
                 processor = self.data_args.video_processor
                 video = os.path.join(video_folder, video_file)
                 # print(video)
+
                 video = processor(video, return_tensors='pt')['pixel_values'][0]
                 # print(video, 'success')
                 # sources = preprocess_multimodal(make_conversation([e["detail"] for e in sources]), self.data_args)
@@ -762,6 +767,10 @@ def train(attn_implementation):
         padding_side="right",
         use_fast=False,
     )
+    
+    # Set unk token and its id as eos
+    # tokenizer.unk_token = tokenizer.eos_token
+    # tokenizer.unk_token_id = tokenizer.eos_token_id
 
     if model_args.version == "v0":
         if tokenizer.pad_token is None:
@@ -773,7 +782,7 @@ def train(attn_implementation):
     elif model_args.version == "v0.5":
         tokenizer.pad_token = tokenizer.unk_token
     else:
-        tokenizer.pad_token = tokenizer.unk_token
+        # tokenizer.pad_token = tokenizer.unk_token
         if model_args.version in conversation_lib.conv_templates:
             conversation_lib.default_conversation = conversation_lib.conv_templates[model_args.version]
         else:
@@ -782,16 +791,6 @@ def train(attn_implementation):
     if model_args.image_tower is not None or model_args.video_tower is not None:  #############################
         if model_args.image_tower is not None:
             image_tower = LanguageBindImageTower(model_args.image_tower, args=model_args)
-            # image_tower = model.get_image_tower()
-            # if image_tower is None:
-            #     model.get_model().initialize_image_modules(
-            #         model_args=model_args,
-            #         fsdp=training_args.fsdp
-            #     )
-            #     image_tower = model.get_image_tower()
-            if not image_tower.is_loaded:
-                # print('load image tower')
-                image_tower.load_model()
             image_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
 
             data_args.image_processor = image_tower.image_processor
@@ -802,16 +801,6 @@ def train(attn_implementation):
 
         if model_args.video_tower is not None:
             video_tower = LanguageBindVideoTower(model_args.video_tower, args=model_args)
-            # video_tower = model.get_video_tower()
-            # if video_tower is None:
-            #     model.get_model().initialize_video_modules(
-            #         model_args=model_args,
-            #         fsdp=training_args.fsdp
-            #     )
-            #     video_tower = model.get_video_tower()
-            if not video_tower.is_loaded:
-                # print('load video tower')
-                video_tower.load_model()
             video_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
 
             data_args.video_processor = video_tower.video_processor
