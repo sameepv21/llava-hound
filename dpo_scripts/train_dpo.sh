@@ -10,7 +10,7 @@ export WANDB_PROJECT=video-llama3
 export WANDB_NAME=video-llama3-ft
 
 # gpu_ids=0
-gpu_ids=3,4,5,6,7
+gpu_ids=0
 export CUDA_VISIBLE_DEVICES=$gpu_ids
 n_gpu=$(echo $gpu_ids | tr "," "\n" | wc -l)
 echo "Using $n_gpu GPUs: $gpu_ids"
@@ -64,7 +64,7 @@ torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_dpo \
     --weight_decay 0. --warmup_ratio 0.1 \
     --lr_scheduler_type "linear" \
     --logging_steps 25 \
-    --tf32 True \
+    --tf32 False \
     --model_max_length 2048 \
     --gradient_checkpointing True \
     --lazy_preprocess True \

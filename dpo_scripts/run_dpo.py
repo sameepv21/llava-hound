@@ -321,6 +321,8 @@ def preprocess_v1(
             truncation=True,
         ).input_ids
 
+    max_value = input_ids.max()
+
     targets = input_ids.clone()
 
     assert conv.sep_style == conversation_lib.SeparatorStyle.TWO
@@ -690,6 +692,7 @@ def make_dpo_data_module(tokenizer: transformers.PreTrainedTokenizer,
 
 
 def train(attn_implementation):
+    # attn_implementation = None
     global local_rank
     parser = transformers.HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments))
@@ -767,10 +770,11 @@ def train(attn_implementation):
         padding_side="right",
         use_fast=False,
     )
-    
-    # Set unk token and its id as eos
-    # tokenizer.unk_token = tokenizer.eos_token
-    # tokenizer.unk_token_id = tokenizer.eos_token_id
+
+    # Resize tokenizer
+    model.resize_token_embeddings(len(tokenizer))
+    embedding_size = model.get_input_embeddings().weight.size(0)
+    print(len(tokenizer))
 
     if model_args.version == "v0":
         if tokenizer.pad_token is None:
