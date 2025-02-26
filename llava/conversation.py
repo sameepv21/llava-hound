@@ -332,6 +332,17 @@ conv_llava_v0_mmtag = Conversation(
     version="v0_mmtag",
 )
 
+conv_llama_3 = Conversation(
+    system="You are VideoLLaMA3 created by Alibaba DAMO Academy, a helpful assistant to help people understand images and videos.",
+    roles=("USER", "ASSISTANT"),
+    version="llama_3",
+    messages=(),
+    offset=0,
+    sep_style=SeparatorStyle.TWO,
+    sep=" ",
+    sep2="<|endoftext|>",
+)
+
 conv_llava_v1 = Conversation(
     system="A chat between a curious human and an artificial intelligence assistant. "
            "The assistant gives helpful, detailed, and polite answers to the human's questions.",
@@ -363,6 +374,8 @@ conv_templates = {
     "v0": conv_vicuna_v0,
     "v1": conv_vicuna_v1,
     "vicuna_v1": conv_vicuna_v1,
+
+    "llama_3": conv_llama_3,
     "llama_2": conv_llama_2,
 
     "plain": conv_llava_plain,

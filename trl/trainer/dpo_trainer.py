@@ -991,7 +991,7 @@ class DPOTrainer(Trainer):
         
         len_chosen = batch["chosen_labels"].shape[0]
 
-        all_logits, new_labels = model(
+        outputs = model(
             concatenated_batch["concatenated_input_ids"],
             attention_mask=concatenated_batch["concatenated_attention_mask"],
             labels=concatenated_batch["concatenated_labels"],
@@ -999,6 +999,8 @@ class DPOTrainer(Trainer):
             use_cache=False,
             dpo_forward=True,
         )
+        all_logits = outputs.logits
+        new_labels = concatenated_batch["concatenated_labels"] # Same as the old one
         all_logits = all_logits.to(torch.float32)
         all_logps = self.get_batch_logps(
             all_logits,

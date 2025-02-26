@@ -38,7 +38,7 @@ from llava.train.llava_trainer import LLaVADPOTrainer
 from llava import conversation as conversation_lib
 conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
 from llava.model import *
-from llava.mm_utils import tokenizer_X_token
+from llava.mm_utils import tokenizer_X_token, tokenizer_X_token_llama3
 from trl.trainer.utils import DPODataCollatorWithPadding
 
 from PIL import Image
@@ -273,14 +273,104 @@ def smart_tokenizer_and_embedding_resize(
 def make_conv(prompt, answer):
     return [
         {
-            "from": "human",
-            "value": prompt,
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt}
+            ],
         },
         {
-            "from": "gpt",
-            "value": answer,
+            "role": "assistant",
+            "content": [
+                {"type": "text", "text": answer}
+            ],
         },
     ]
+
+def preprocess_llama3(
+    sources,
+    tokenizer: transformers.PreTrainedTokenizer,
+    X: str = None
+) -> Dict:
+    conv = conversation_lib.default_conversation.copy()
+    roles = {"user": conv.roles[0], "assistant": conv.roles[1]}
+
+    # Apply prompt templates
+    conversations = []
+    for i, source in enumerate(sources):
+        if roles[source[0]["role"]] != conv.roles[0]:
+            # Skip the first one if it is not from human
+            source = source[1:]
+
+        conv.messages = []
+        for j, sentence in enumerate(source):
+            role = roles[sentence["role"]]
+            assert role == conv.roles[j % 2], f"{i}"
+            conv.append_message(role, sentence["content"][0]['text'])
+        conversations.append(conv.get_prompt())
+
+    # Tokenize conversations
+    if X is not None:
+        input_ids = torch.stack([tokenizer_X_token_llama3(prompt, tokenizer, 151644, return_tensors='pt') for prompt in conversations], dim=0)
+    else:
+        input_ids = tokenizer(
+            conversations,
+            return_tensors="pt",
+            padding="longest",
+            max_length=tokenizer.model_max_length,
+            truncation=True,
+        ).input_ids
+
+    targets = input_ids.clone()
+
+    assert conv.sep_style == conversation_lib.SeparatorStyle.TWO
+
+    # Mask targets
+    sep = conv.sep + conv.roles[1] + ": "
+    for conversation, target in zip(conversations, targets):
+        if tokenizer.pad_token_id == None:
+            tokenizer.pad_token_id = tokenizer.eos_token_id
+        total_len = int(target.ne(tokenizer.pad_token_id).sum())
+
+        rounds = conversation.split(conv.sep2)
+        cur_len = 0
+        target[:cur_len] = IGNORE_INDEX
+        for i, rou in enumerate(rounds):
+            if rou == "":
+                break
+
+            parts = rou.split(sep)
+            if len(parts) != 2:
+                break
+            parts[0] += sep
+
+            if X is not None:
+                round_len = len(tokenizer_X_token_llama3(rou, tokenizer, 151644))
+                instruction_len = len(tokenizer_X_token_llama3(parts[0], tokenizer, 151644)) # Changed and do not account for bos and eos. Otherwise subtract 2.
+            else:
+                round_len = len(tokenizer(rou).input_ids)
+                instruction_len = len(tokenizer(parts[0]).input_ids) - 2
+
+            if i != 0 and not tokenizer.legacy and IS_TOKENIZER_GREATER_THAN_0_14:
+                round_len -= 1
+                instruction_len -= 1
+
+            target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
+
+            cur_len += round_len
+        target[cur_len:] = IGNORE_INDEX
+
+        if cur_len < tokenizer.model_max_length:
+            if cur_len != total_len:
+                target[:] = IGNORE_INDEX
+                print(
+                    f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
+                    f" (ignored)"
+                )
+
+    return dict(
+        input_ids=input_ids,
+        labels=targets,
+    )
 
 def preprocess_v1(
     sources,
@@ -320,8 +410,6 @@ def preprocess_v1(
             max_length=tokenizer.model_max_length,
             truncation=True,
         ).input_ids
-
-    max_value = input_ids.max()
 
     targets = input_ids.clone()
 
@@ -417,6 +505,8 @@ def preprocess(
         return preprocess_plain(sources, tokenizer, X=X)
     elif conversation_lib.default_conversation.version.startswith("v1"):
         return preprocess_v1(sources, tokenizer, X=X)
+    elif conversation_lib.default_conversation.version.startswith("llama_3"):
+        return preprocess_llama3(sources, tokenizer, X=X)
     else:
         raise NotImplementedError
 
@@ -529,14 +619,22 @@ class DPODataset(Dataset):
                 video = os.path.join(video_folder, video_file)
                 # print(video)
 
-                video = processor(video, return_tensors='pt')['pixel_values'][0]
+                conversation = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "video", "video": {"video_path": video, "fps": 3, "max_frames": 8}}, # FIXME. Possible that 8 FPV is not guaranteed
+                            {'type': "text", "text": data_dict['prompt']},
+                        ]
+                    },
+                ]
+
+                (modified_prompt, inputs) = processor(conversation = conversation, return_tensors='pt')
+                video = inputs['pixel_values']
                 # print(video, 'success')
                 # sources = preprocess_multimodal(make_conversation([e["detail"] for e in sources]), self.data_args)
-                prompt = data_dict['prompt']
-                prompt = prompt.replace("<video>", "").strip()
-                prompt = "<video>\n" + prompt
-                data_dict['prompt'] = prompt
                 has_X = 'video'
+                del inputs
             else:
                 raise("Training modal not supported")
                 # prompt = data_dict['prompt']
@@ -550,6 +648,7 @@ class DPODataset(Dataset):
                 data_dict['video'] = video
                 # print('success video')
             
+            data_dict['prompt'] = modified_prompt
             return data_dict
         except Exception as e:
             print(f'Error with {e}, {self.list_data_dict[i]}')
@@ -558,29 +657,10 @@ class DPODataset(Dataset):
 @dataclass
 class DPODataCollator(DPODataCollatorWithPadding):
     def collate(self, batch):
-        # first, pad everything to the same length
-        # input_ids, labels = tuple([instance[key] for instance in instances]
-        #                           for key in ("input_ids", "labels"))
-        # input_ids = torch.nn.utils.rnn.pad_sequence(
-        #     input_ids,
-        #     batch_first=True,
-        #     padding_value=self.tokenizer.pad_token_id)
-        # labels = torch.nn.utils.rnn.pad_sequence(labels,
-        #                                          batch_first=True,
-        #                                          padding_value=IGNORE_INDEX)
-        # input_ids = input_ids[:, :self.tokenizer.model_max_length]
-        # labels = labels[:, :self.tokenizer.model_max_length]
-        # batch = dict(
-        #     input_ids=input_ids,
-        #     labels=labels,
-        #     attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
-        # )
         padded_batch = {}
         for k in batch[0].keys():
             if k.endswith("_input_ids") or k.endswith("_attention_mask") or k.endswith("_labels"):
-                # if "prompt" in k:
-                #     to_pad = [torch.LongTensor(ex[k][::-1]) for ex in batch]
-                # else:
+
                 to_pad = [torch.LongTensor(ex[k]) for ex in batch]
                 if k.endswith("_input_ids"):
                     padding_value = self.tokenizer.pad_token_id
@@ -591,15 +671,8 @@ class DPODataCollator(DPODataCollatorWithPadding):
                     padding_value = self.label_pad_token_id
                 else:
                     continue
-                # elif k.endswith("_attention_mask"):
-                #     padding_value = self.padding_value
-                # else:
-                #     raise ValueError(f"Unexpected key in batch '{k}'")
 
                 padded_batch[k] = torch.nn.utils.rnn.pad_sequence(to_pad, batch_first=True, padding_value=padding_value)
-                # for the prompt, flip back so padding is on left side
-                # if "prompt" in k:
-                #     padded_batch[k] = padded_batch[k].flip(dims=[1])
             else:
                 padded_batch[k] = [ex[k] for ex in batch]
         for k in ['chosen_input_ids', 'rejected_input_ids']:
@@ -628,6 +701,8 @@ class DPODataCollator(DPODataCollatorWithPadding):
         """
         # import pdb; pdb.set_trace()
         batch = {}
+
+
         
         chosen_sources = make_conv(prompt, chosen)
         rejected_sources = make_conv(prompt, rejected)
@@ -771,11 +846,6 @@ def train(attn_implementation):
         use_fast=False,
     )
 
-    # Resize tokenizer
-    model.resize_token_embeddings(len(tokenizer))
-    embedding_size = model.get_input_embeddings().weight.size(0)
-    print(len(tokenizer))
-
     if model_args.version == "v0":
         if tokenizer.pad_token is None:
             smart_tokenizer_and_embedding_resize(
@@ -794,20 +864,18 @@ def train(attn_implementation):
 
     if model_args.image_tower is not None or model_args.video_tower is not None:  #############################
         if model_args.image_tower is not None:
-            image_tower = LanguageBindImageTower(model_args.image_tower, args=model_args)
-            image_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
-
-            data_args.image_processor = image_tower.image_processor
+            image_tower = transformers.AutoProcessor.from_pretrained(model_args.image_tower, trust_remote_code = True)
+            
+            data_args.image_processor = image_tower
             data_args.is_multimodal = True
 
             model.config.image_aspect_ratio = data_args.image_aspect_ratio
             model.config.image_grid_pinpoints = data_args.image_grid_pinpoints
 
         if model_args.video_tower is not None:
-            video_tower = LanguageBindVideoTower(model_args.video_tower, args=model_args)
-            video_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
-
-            data_args.video_processor = video_tower.video_processor
+            video_tower = transformers.AutoProcessor.from_pretrained(model_args.video_tower, trust_remote_code = True)
+        
+            data_args.video_processor = video_tower
             data_args.is_multimodal = True
 
             # model.config.image_aspect_ratio = data_args.image_aspect_ratio

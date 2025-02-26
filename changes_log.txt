@@ -3,3 +3,5 @@ change trainer.py in the packages to that from transformers version 4.37.0
 
 Accelerate version 0.26.0 works
 flash attention version 2.5.3 works
+
+Modified the processing_videollama3.py in .cache/huggingface/modules/... to return modified 

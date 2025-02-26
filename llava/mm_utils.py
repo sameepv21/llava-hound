@@ -61,6 +61,26 @@ def process_images(images, image_processor, model_cfg):
 #         raise ValueError(f'Unsupported tensor type: {return_tensors}')
 #     return input_ids
 
+def tokenizer_X_token_llama3(prompt, tokenizer, X_token_index, return_tensors = None):
+    prompt_chunks = [tokenizer(chunk).input_ids for chunk in prompt.split("<|im_start|>")]
+
+    def insert_separator(X, sep):
+        return [ele for sublist in zip(X, [sep]*len(X)) for ele in sublist][:-1]
+
+    input_ids = []
+    offset = 0
+    if len(prompt_chunks) > 0 and len(prompt_chunks[0]) > 0 and prompt_chunks[0][0] == tokenizer.bos_token_id:
+        offset = 1
+        input_ids.append(prompt_chunks[0][0])
+
+    for x in insert_separator(prompt_chunks, [X_token_index] * (offset + 1)):
+        input_ids.extend(x[offset:])
+
+    if return_tensors is not None:
+        if return_tensors == 'pt':
+            return torch.tensor(input_ids, dtype=torch.long)
+        raise ValueError(f'Unsupported tensor type: {return_tensors}')
+    return input_ids
 
 def tokenizer_X_token(prompt, tokenizer, X_token_index, return_tensors=None):
     prompt_chunks = [tokenizer(chunk).input_ids for chunk in prompt.split(f'<{X_INDEX_TOKEN[X_token_index].lower()}>')]
