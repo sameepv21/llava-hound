@@ -1,6 +1,6 @@
 input_model_name=${1:-"DAMO-NLP-SG/VideoLLaMA3-7B"}
 output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/videollama3"}
-lr=${3:-"2e-5"}
+lr=${3:-"5e-7"}
 
 cache_dir=/home/cr8dl-user/.cache
 export cache_dir=$cache_dir
@@ -10,7 +10,7 @@ export WANDB_PROJECT=video-llama3
 export WANDB_NAME=video-llama3-ft
 
 # gpu_ids=0
-gpu_ids=0
+gpu_ids=3,4,5,6,7
 export CUDA_VISIBLE_DEVICES=$gpu_ids
 n_gpu=$(echo $gpu_ids | tr "," "\n" | wc -l)
 echo "Using $n_gpu GPUs: $gpu_ids"
@@ -26,7 +26,7 @@ video_dir=/home/cr8dl-user/sameep/datasets/timewarp
 image_dir="/"
 
 # sudo chmod +x -R .
-export PYTHONPATH="/home/cr8dl-user/arpit/miniforge3/envs/videollama3/bin/python"
+export PYTHONPATH="/home/cr8dl-user/arpit/miniforge3/envs/vl3_new/bin/python"
 rand=$RANDOM
 port=$((19000 + $rand % 1000))
 
@@ -36,13 +36,13 @@ torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_dpo \
     --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
     --model_name_or_path $model_name_or_path \
     --dpo_alpha 1.0 --beta 0.1 --gamma 0 \
-    --version plain \
+    --version llama_3 \
     --data_path $data_path \
     --video_folder $video_dir \
     --image_folder $image_dir \
     --X "Image" "Video" --training_modal 'video' \
-    --image_tower LanguageBind/LanguageBind_Image \
-    --video_tower LanguageBind/LanguageBind_Video_merge \
+    "--image_tower" "DAMO-NLP-SG/VideoLLaMA3-7B" \
+    "--video_tower" "DAMO-NLP-SG/VideoLLaMA3-7B" \
     --mm_projector_type mlp2x_gelu \
     --mm_vision_select_layer -2 \
     --mm_use_x_start_end False \

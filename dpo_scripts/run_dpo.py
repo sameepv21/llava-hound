@@ -634,7 +634,6 @@ class DPODataset(Dataset):
                 # print(video, 'success')
                 # sources = preprocess_multimodal(make_conversation([e["detail"] for e in sources]), self.data_args)
                 has_X = 'video'
-                del inputs
             else:
                 raise("Training modal not supported")
                 # prompt = data_dict['prompt']
