@@ -995,7 +995,9 @@ class DPOTrainer(Trainer):
             concatenated_batch["concatenated_input_ids"],
             attention_mask=concatenated_batch["concatenated_attention_mask"],
             labels=concatenated_batch["concatenated_labels"],
-            images=concatenated_batch["concatenated_images"],
+            pixel_values=concatenated_batch["concatenated_images"],
+            grid_sizes=torch.cat((batch['grid_sizes'], batch['grid_sizes']), dim = 0),
+            merge_sizes=torch.cat((batch['merge_sizes'], batch['merge_sizes']), dim = 0),
             use_cache=False,
             dpo_forward=True,
         )

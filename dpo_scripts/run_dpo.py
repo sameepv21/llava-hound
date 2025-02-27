@@ -631,6 +631,8 @@ class DPODataset(Dataset):
 
                 (modified_prompt, inputs) = processor(conversation = conversation, return_tensors='pt')
                 video = inputs['pixel_values']
+                grid_sizes = inputs['grid_sizes']
+                merge_sizes = inputs['merge_sizes']
                 # print(video, 'success')
                 # sources = preprocess_multimodal(make_conversation([e["detail"] for e in sources]), self.data_args)
                 has_X = 'video'
@@ -648,6 +650,8 @@ class DPODataset(Dataset):
                 # print('success video')
             
             data_dict['prompt'] = modified_prompt
+            data_dict['grid_sizes'] = grid_sizes
+            data_dict['merge_sizes'] = merge_sizes
             return data_dict
         except Exception as e:
             print(f'Error with {e}, {self.list_data_dict[i]}')
@@ -744,10 +748,14 @@ class DPODataCollator(DPODataCollatorWithPadding):
             keys.append(has_X)
              
             batch_element = self.tokenize_batch_element(prompt, chosen, rejected, has_X=has_X)
+            batch_element['grid_sizes'] = feature['grid_sizes']
+            batch_element['merge_sizes'] = feature['merge_sizes']
             tokenized_batch.append(batch_element)
 
         # return collated batch
         padded_batch =  self.collate(tokenized_batch)
+        padded_batch['grid_sizes'] = torch.cat(padded_batch['grid_sizes'], dim = 0)
+        padded_batch['merge_sizes'] = torch.cat(padded_batch['merge_sizes'], dim = 0)
         padded_batch['images'] = [Xs, keys]  # we do not change the key's name.
         return padded_batch
 
@@ -879,7 +887,8 @@ def train(attn_implementation):
 
             # model.config.image_aspect_ratio = data_args.image_aspect_ratio
             # model.config.image_grid_pinpoints = data_args.image_grid_pinpoints
-
+        # FIXME
+        model.config.use_token_compression = False # Since batch size is more than 1.
         model.config.tune_mm_mlp_adapter = training_args.tune_mm_mlp_adapter = model_args.tune_mm_mlp_adapter
         if model_args.tune_mm_mlp_adapter:
             model.requires_grad_(False)
