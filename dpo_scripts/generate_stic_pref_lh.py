@@ -12,12 +12,9 @@ import torch
 import transformers
 from tqdm import tqdm
 from llava.conversation import conv_templates, SeparatorStyle
-from llava.constants import DEFAULT_X_START_TOKEN, DEFAULT_X_TOKEN, DEFAULT_X_END_TOKEN, X_TOKEN_INDEX
+from llava.constants import DEFAULT_X_TOKEN, X_TOKEN_INDEX
 from llava.mm_utils import get_model_name_from_path, tokenizer_X_token, KeywordsStoppingCriteria
 from llava.model.builder import load_pretrained_model
-from llava.model.language_model.llava_llama import LlavaLlamaForCausalLM
-from llava.train.train import smart_tokenizer_and_embedding_resize
-from inference.inference import model_function, split_list, get_chunk, get_ranged_data, inference_data_list, remove_special_tokens
 
 prompt_list = ["Illustrate the sequence of events unfolding in the video.",
                 "Summarize the dynamic visual content presented over time.",
@@ -57,9 +54,11 @@ def corrupt_frames(directory, video):
             image = T.Resize(size=20)(image)
             image.save(os.path.join(path, image_file))
     else:
-        jitter = T.ColorJitter(brightness=.5, hue=.3)
-        image = jitter(image)
-        image.save(os.path.join(path, image_file))
+        for image_file in os.listdir(path):
+            jitter = T.ColorJitter(brightness=.5, hue=.3)
+            image = Image.open(os.path.join(path, image_file))
+            image = jitter(image)
+            image.save(os.path.join(path, image_file))
 
 def eval_model(args, model_dict, frame_corruption = False):
     tokenizer = model_dict['tokenizer']
@@ -71,9 +70,9 @@ def eval_model(args, model_dict, frame_corruption = False):
     query = DEFAULT_X_TOKEN[modal_type] + "\n" + args.query
 
     conv_mode = 'v1'
-    conv = conv_templates(conv_mode).copy()
+    conv = conv_templates[conv_mode].copy()
     conv.append_message(conv.roles[0], query)
-    conv.appent_message(conv.roles[1], None)
+    conv.append_message(conv.roles[1], None)
     prompt = conv.get_prompt()
 
     if frame_corruption:
@@ -87,6 +86,7 @@ def eval_model(args, model_dict, frame_corruption = False):
         raise ValueError(f"model_type {modal_type} not supported")
     
     input_ids = tokenizer_X_token(prompt, tokenizer, X_TOKEN_INDEX[modal_type], return_tensors='pt')
+    input_ids = input_ids.reshape(1, -1)
     stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
     keywords = [stop_str]
     stopping_criteria = KeywordsStoppingCriteria(keywords, tokenizer, input_ids)
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     model_name = get_model_name_from_path(args.model_path)
     tokenizer, model, processor, context_len = load_pretrained_model(
         model_path = args.model_path,
-        base_model = args.model_base,
+        model_base = args.model_base,
         model_name = model_name,
     )
 
@@ -164,7 +164,13 @@ if __name__ == "__main__":
 
     directory = args.video_dir
 
-    for idx, video_id in tqdm(enumerate(os.listdir(directory))):
+    response_dicts = []
+
+    with open('/home/cr8dl-user/sameep/datasets/llava-hound/sft_dpo_17k.jsonl', 'r') as f:
+        video_data = [json.loads(line) for line in f]
+
+    for idx, video_info in tqdm(enumerate(video_data)):
+        video_id = video_info['id'].rsplit("_", 1)[0]
         args.query = full_prompt
         args.video_file = video_id
 
@@ -179,19 +185,24 @@ if __name__ == "__main__":
             corrupted_output = eval_model(args, model_dict)
         else:
             args.query = prompt
-            correcpted_output = eval_model(args, model_dict, frame_corruption=True)
+            corrupted_output = eval_model(args, model_dict, frame_corruption=True)
+            frame_corruption = True
         
         d = {
                 "id": video_id + "_" + str(idx),
                 "video": video_id,
                 "prompt": prompt,
+                "frame_corruption": frame_corruption,
                 "answer": preferred_output,
                 "chosen": preferred_output,
                 "chosen_score": random.randint(3, 5),
-                "rejected": correcpted_output,
+                "rejected": corrupted_output,
                 "rejected_score": random.randint(0, 3),
             }
         
-        with open(args.save_dir, "a") as f:
-            f.write(json.dumps(d))
-            f.write("\n")
+        response_dicts.append(d)
+        
+    output_file_path = os.path.join(args.save_dir)
+    with open(output_file_path, 'w') as outfile:
+        json.dump(response_dicts, outfile, indent=4)
+    print(f"Saved response data to {output_file_path}")
