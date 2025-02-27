@@ -633,6 +633,9 @@ class DPODataset(Dataset):
                 video = inputs['pixel_values']
                 grid_sizes = inputs['grid_sizes']
                 merge_sizes = inputs['merge_sizes']
+                # contains_text = any(modal == "text" for modal in inputs['modals'])
+                # if contains_text:
+                #     print("Text Found")
                 # print(video, 'success')
                 # sources = preprocess_multimodal(make_conversation([e["detail"] for e in sources]), self.data_args)
                 has_X = 'video'

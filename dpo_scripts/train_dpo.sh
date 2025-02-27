@@ -10,7 +10,7 @@ export WANDB_PROJECT=video-llama3
 export WANDB_NAME=video-llama3-ft
 
 # gpu_ids=0
-gpu_ids=3,4,5,6,7
+gpu_ids=1,3,4,5,6
 export CUDA_VISIBLE_DEVICES=$gpu_ids
 n_gpu=$(echo $gpu_ids | tr "," "\n" | wc -l)
 echo "Using $n_gpu GPUs: $gpu_ids"

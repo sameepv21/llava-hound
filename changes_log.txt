@@ -6,4 +6,5 @@ flash attention version 2.5.3 works
 
 Modified the processing_videollama3.py in .cache/huggingface/modules/... to return modified 
 
-change in grid_sizes in DPODataset. Same change in concatenated forward as well
+Change in grid_sizes in DPODataset. Same change in concatenated forward as well
+Added dynamic video wise compression / average pooling in modelling_videollama3 while preparing multimodal inputs
