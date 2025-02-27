@@ -1,5 +1,5 @@
 input_model_name=${1:-"DAMO-NLP-SG/VideoLLaMA3-7B"}
-output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/videollama3"}
+output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/videollama3_lp"}
 lr=${3:-"5e-7"}
 
 cache_dir=/home/cr8dl-user/.cache
@@ -10,7 +10,7 @@ export WANDB_PROJECT=video-llama3
 export WANDB_NAME=video-llama3-ft
 
 # gpu_ids=0
-gpu_ids=1,3,4,5,6
+gpu_ids=3,4,5,6,7
 export CUDA_VISIBLE_DEVICES=$gpu_ids
 n_gpu=$(echo $gpu_ids | tr "," "\n" | wc -l)
 echo "Using $n_gpu GPUs: $gpu_ids"
