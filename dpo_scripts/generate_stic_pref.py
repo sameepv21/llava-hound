@@ -43,7 +43,7 @@ hallu_prompt_list = [
 
 def eval_model(args, model_dict):
     processor = model_dict['processor']
-    model = model_dict['model']
+    model = model_dict['model'].to(torch.bfloat16)
     modal_type = args.modal_type 
     query = args.query
 
@@ -83,7 +83,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     processor = AutoProcessor.from_pretrained(args.model_path, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(args.model_path, trust_remote_code=True).to('cuda')
+    
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model_path,
+        trust_remote_code=True,
+        device_map={"": "cuda"},
+        torch_dtype=torch.bfloat16,
+        attn_implementation="flash_attention_2",
+    )
 
     model_dict = {
         "processor": processor,
