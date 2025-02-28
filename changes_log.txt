@@ -8,5 +8,6 @@ Modified the processing_videollama3.py in .cache/huggingface/modules/... to retu
 
 Change in grid_sizes in DPODataset. Same change in concatenated forward as well
 
-Added dynamic video wise compression / average pooling in modelling_videollama3 while preparing multimodal inputs
+Added dynamic video wise compression / average pooling while preparing multimodal inputs
 For the same purpose added a simple projection layer.
+These were done in modelling_videollama3
