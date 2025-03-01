@@ -178,6 +178,7 @@ if __name__ == "__main__":
         
         hallu_prompt = ""
         prompt = random.choice(prompt_list)
+        
 
         if random.random() > 0.5:
             hallu_prompt = random.choice(hallu_prompt_list)
