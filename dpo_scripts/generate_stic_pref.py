@@ -60,10 +60,15 @@ def eval_model(args, model_dict):
     inputs = processor(
         conversation=conversation,
         return_tensors='pt',
-    ).to("cuda:0")
+    )[1].to("cuda")
+
+    inputs["eval"] = True
 
     if "pixel_values" in inputs:
         inputs["pixel_values"] = inputs["pixel_values"].to(torch.bfloat16)
+    # output_ids = model(
+    #     input_ids=inputs.
+    # )
     output_ids = model.generate(**inputs, max_new_tokens=1024)
     response = processor.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
     return response
@@ -72,7 +77,7 @@ def eval_model(args, model_dict):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default='DAMO-NLP-SG/VideoLLaMA3-7B')
-    parser.add_argument("--video_dir", type=str, default="/home/cr8dl-user/sameep/datasets/timewarp/stic_lh_frames")
+    parser.add_argument("--video_dir", type=str, default="/home/cr8dl-user/sameep/datasets/timewarp/llava_hound_frames")
     parser.add_argument("--save_dir", type=str, default="/home/cr8dl-user/sameep/datasets/timewarp/stic_vl3_pref.json")
     parser.add_argument("--video_file", type=str, default=None)
     parser.add_argument("--query", type=str, default="Describe the Video.")
@@ -110,12 +115,19 @@ if __name__ == "__main__":
         args.query = full_prompt
         args.video_file = video_id
 
+        # For preferred output, use the original frames
+        args.video_dir = "/home/cr8dl-user/sameep/datasets/timewarp/llava_hound_frames"
+
+        # Compute preferred response
         preferred_output = eval_model(args, model_dict)
+
+        # For dispreferred output, use the corrupted frames
+        args.video_dir = "/home/cr8dl-user/sameep/datasets/timewarp/stic_lh_frames"
         
         hallu_prompt = ""
         prompt = random.choice(prompt_list)
 
-        frame_corruption = frame_corruption_data.get(video_id, False)
+        frame_corruption = frame_corruption_data[idx].get(video_id, False)
 
         if frame_corruption:
             args.query = prompt
