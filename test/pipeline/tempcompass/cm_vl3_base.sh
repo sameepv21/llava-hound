@@ -1,7 +1,7 @@
-output_model_name=videollama3_temporal_cm
+output_model_name=videollama3_base_cm
 model_path=DAMO-NLP-SG/VideoLLaMA3-7B
 model_base="None"
-load_peft=/home/cr8dl-user/sameep/experiments/videollama3_lp
+load_peft="None"
 
 data_name=tempcompass
 TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/tempcompass

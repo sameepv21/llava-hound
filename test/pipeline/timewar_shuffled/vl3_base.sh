@@ -1,13 +1,13 @@
-output_model_name=videollama3_temporal_cm
+output_model_name=videollama3-base
 model_path=DAMO-NLP-SG/VideoLLaMA3-7B
 model_base="None"
-load_peft=/home/cr8dl-user/sameep/experiments/videollama3_lp
+load_peft="None"
 
-data_name=tempcompass
-TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/tempcompass
+data_name=timewar_shuffled
+TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/timewarp
 TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/${output_model_name}
 
-data_path=$TEST_DATA_DIR/cm_tempcompass_lh.json
+data_path=$TEST_DATA_DIR/shuffled_temporal_benchmark_sampled.json
 output_path=$TEST_RESULT_DIR/${data_name}/inference_test_official
 
 cache_dir=/home/cr8dl-user/.cache

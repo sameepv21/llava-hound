@@ -4,7 +4,7 @@ model_base="None"
 load_peft=/home/cr8dl-user/sameep/experiments/videollama3_ap
 
 data_name=timewar_shuffled
-TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/llava-hound
+TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/timewarp
 TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/${output_model_name}
 
 data_path=$TEST_DATA_DIR/shuffled_temporal_benchmark_sampled.json
