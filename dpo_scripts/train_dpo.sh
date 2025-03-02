@@ -1,5 +1,5 @@
 input_model_name=${1:-"DAMO-NLP-SG/VideoLLaMA3-7B"}
-output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/videollama3_lp"}
+output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/videollama3_lp_stic"}
 lr=${3:-"5e-7"}
 
 cache_dir=/home/cr8dl-user/.cache
@@ -20,9 +20,9 @@ output_dir=$output_model_name
 mkdir -p $output_dir
 
 # DATA
-data_path=/home/cr8dl-user/sameep/datasets/timewarp/timewarp_30k_frames.json
+data_path=/home/cr8dl-user/sameep/datasets/timewarp/stic_vl3_pref.json
 
-video_dir=/home/cr8dl-user/sameep/datasets/timewarp
+video_dir=/home/cr8dl-user/sameep/datasets/timewarp/llava_hound_frames
 image_dir="/"
 
 # sudo chmod +x -R .

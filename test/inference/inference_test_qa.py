@@ -15,7 +15,7 @@ from llava.mm_utils import get_model_name_from_path
 from data_processing.utils import load_json_data, save_jsonl, save_json
 from inference.inference import model_function, split_list, get_chunk, get_ranged_data, inference_data_list, remove_special_tokens
 
-from transformers import CLIPImageProcessor
+from transformers import CLIPImageProcessor, AutoProcessor, AutoModelForCausalLM, AutoTokenizer
 from PIL import Image
 
 def main(model_path, base_model_path, data_path, output_dir, output_name, chunk_idx, chunks, video_dir=None, range_start=None, range_end=None, **kwargs):    
@@ -42,7 +42,8 @@ def main(model_path, base_model_path, data_path, output_dir, output_name, chunk_
             'answer': 'The athlete transitions into the takeoff phase by arching her body and showing powerful leg push-off.'
             }
         """
-        query = remove_special_tokens(dp['conversations'][0]['value'])
+        # query = remove_special_tokens(dp['conversations'][0]['value'])
+        query = dp['conversations'][0]['value'].replace("<video>", "").strip()
         answer = dp['conversations'][1]['value']
         idx = dp['id'] if 'id' in dp else dp['idx']
         modal_path = dp['video'] if video_dir is None else f"{video_dir}/{dp['video']}"
@@ -63,17 +64,30 @@ def main(model_path, base_model_path, data_path, output_dir, output_name, chunk_
 
     model_name = get_model_name_from_path(model_path)
     logger.info(f"model {model_name}")
-    tokenizer, model, processor, context_len = load_pretrained_model(model_path, base_model_path, model_name, device_map={"":0})
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        trust_remote_code=True,
+        device_map={"": "cuda"},
+        torch_dtype=torch.bfloat16,
+        attn_implementation="flash_attention_2",
+    )
+    model.config.use_token_compression = False
+    processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
+    # tokenizer = AutoTokenizer.from_pretrained(
+    #     model_path,
+    #     cache_dir='/home/cr8dl-user/.cache', # Change based on your location FIXME
+    #     use_fast=False,
+    # )
+    # tokenizer, model, processor, context_len = load_pretrained_model(model_path, base_model_path, model_name, device_map={"":0})
     
     if peft_path:
         model.load_adapter(peft_path)
         print(f"Loaded adapters from {peft_path}")
 
     model_dict = {
-        "tokenizer": tokenizer,
         "model": model,
         "processor": processor,
-        "context_len": context_len,
+        # "context_len": context_len,
     }
 
     output_path = f"{output_dir}/{output_name}"

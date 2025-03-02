@@ -12,7 +12,7 @@ import numpy as np
 
 from llava.conversation import conv_templates, SeparatorStyle
 from llava.constants import DEFAULT_X_START_TOKEN, DEFAULT_X_TOKEN, DEFAULT_X_END_TOKEN, X_TOKEN_INDEX
-from llava.mm_utils import get_model_name_from_path, tokenizer_X_token, KeywordsStoppingCriteria
+from llava.mm_utils import get_model_name_from_path, tokenizer_X_token, KeywordsStoppingCriteria, tokenizer_X_token_llama3
 from llava.model.builder import load_pretrained_model
 from llava.model.language_model.llava_llama import LlavaLlamaForCausalLM
 from llava.train.train import smart_tokenizer_and_embedding_resize
@@ -44,86 +44,31 @@ def model_function(model_dict, input_data):
         }
     """
     # unpack model dict
-    tokenizer = model_dict["tokenizer"]
     model = model_dict["model"]
     processor = model_dict["processor"]
-    video_processor = processor.get('video', None)
-    image_processor = processor.get('image', None)
-    context_len = model_dict["context_len"]
-    modal_type = input_data.get('modal_type', 'VIDEO').upper()
+    qs = input_data['query']
 
-    qs = remove_special_tokens(input_data['query'])
-    if model.config.mm_use_x_start_end:
-        qs = DEFAULT_X_START_TOKEN[modal_type] + DEFAULT_X_TOKEN[modal_type] + DEFAULT_X_END_TOKEN[modal_type] + '\n' + qs
-    else:
-        qs = DEFAULT_X_TOKEN[modal_type] + '\n' + qs
-    # print(qs)
+    conversation = [
+        {
+            'role': 'user',
+            'content': [
+                {'type': 'video', "video": {"video_path": input_data['modal_path'], "fps": 1, "max_frames": 180}},
+                {'type': 'text', "text": qs},
+            ]
+        }
+    ]
 
-    conv_mode = "v1"
-    conv = conv_templates[conv_mode].copy()
-    conv.append_message(conv.roles[0], qs)
-    conv.append_message(conv.roles[1], None)
-    prompt = conv.get_prompt()
+    (_, inputs) = processor(conversation = conversation, return_tensors = 'pt')
 
-    if modal_type == 'IMAGE':
-        image_path = input_data['modal_path']
-        modal_tensor = image_processor.preprocess(image_path, return_tensors='pt')['pixel_values'][0].half().to('cuda')
-    elif modal_type == 'VIDEO':
-        video_decode_backend = input_data.get('video_decode_backend', 'frames')
-        video_path = input_data['modal_path']
-        modal_tensor = video_processor(video_path, return_tensors='pt', video_decode_backend=video_decode_backend)['pixel_values'][0].half().to('cuda')
-    else:
-        raise ValueError(f"modal_type {modal_type} not supported")
+    inputs['eval'] = True
 
-    # print(video_tensor.shape)
-    input_ids = tokenizer_X_token(prompt, tokenizer, X_TOKEN_INDEX[modal_type], return_tensors='pt').unsqueeze(0).to('cuda')
+    if "pixel_values" in inputs:
+        inputs["pixel_values"] = inputs["pixel_values"].to(torch.bfloat16)
 
-    stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
-    keywords = [stop_str]
-    stopping_criteria = KeywordsStoppingCriteria(keywords, tokenizer, input_ids)
-
-    temperature = input_data.get('temperature', 0.7)
-    if temperature < 0.01:
-        temperature = -1 # greedy
-    top_p = input_data.get('top_p', 0.9)
-    max_context_length = getattr(
-        model.config, 'max_position_embeddings', 2048)
-    max_new_tokens = input_data.get("max_new_tokens", 1024)
-    max_new_tokens = min(max_context_length - input_ids.shape[1], max_new_tokens)
-    # stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
-
-    with torch.inference_mode():
-        input_ids = input_ids.to("cuda")
-        model = model.to('cuda')
-        modal_tensor = modal_tensor.to("cuda")
-        model.half()
-        output_ids = model.generate(
-            input_ids,
-            images=[[modal_tensor], [modal_type.lower()]],
-            do_sample=True if temperature > 0 else False,
-            temperature=temperature,
-            top_p=top_p,
-            max_new_tokens=max_new_tokens,
-            use_cache=True,
-            stopping_criteria=[stopping_criteria],
-        )
-
-    input_token_len = input_ids.shape[1]
-    n_diff_input_output = (input_ids != output_ids[:, :input_token_len]).sum().item()
-    if n_diff_input_output > 0:
-        print(f'[Warning] {n_diff_input_output} output_ids are not the same as the input_ids')
-    outputs = tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)[0]
-    outputs = outputs.strip()
-    if outputs.endswith(stop_str):
-        outputs = outputs[:-len(stop_str)]
-    outputs = outputs.strip()
+    inputs = inputs.to('cuda')
+    output_ids = model.generate(**inputs, max_new_tokens=2048)
+    outputs = processor.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
     return outputs
-    # result = {
-    #     'status': 'success',
-    #     'message': outputs
-    # }
-    # # print(outputs)
-    # return result
 
 def split_list(lst, n):
     """Split a list into n (roughly) equal-sized chunks"""
