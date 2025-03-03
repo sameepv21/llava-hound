@@ -1,6 +1,6 @@
 input_model_name=${1:-"ShareGPTVideo/LLaVA-Hound-SFT"}
 output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/llavahound_stic"}
-lr=${3:-"2e-5"}
+lr=${3:-"5e-7"}
 
 cache_dir=/home/cr8dl-user/.cache
 export cache_dir=$cache_dir
