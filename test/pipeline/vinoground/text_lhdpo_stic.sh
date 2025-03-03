@@ -1,4 +1,4 @@
-output_model_name=llavahound_stic
+output_model_name=llavahound_stic_text
 model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
 load_peft=/home/cr8dl-user/sameep/experiments/llavahound_stic

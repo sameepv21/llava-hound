@@ -1,7 +1,7 @@
-output_model_name=llava-hound-dpo-temporal
+output_model_name=llavahound_temporal_text
 model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
-load_peft=/home/cr8dl-user/sameep/experiments/checkpoints_backup/llava-hound-tw
+load_peft=/home/cr8dl-user/sameep/experiments/llava-hound-tw
 
 data_name=vinoground
 TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/vinoground

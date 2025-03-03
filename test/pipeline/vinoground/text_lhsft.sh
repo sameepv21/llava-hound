@@ -1,4 +1,4 @@
-output_model_name=llava-hound-sft
+output_model_name=llavahound_sft_text
 model_path=ShareGPTVideo/LLaVA-Hound-SFT
 model_base="None"
 load_peft="None"
