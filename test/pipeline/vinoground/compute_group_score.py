@@ -1,19 +1,22 @@
-import os
-import sys
 import json
+import argparse
+from tqdm import tqdm
 
 model = "sys.argv[1]"
 TYPE = "group"
 
-# os.makedirs(f"{model}/{TYPE}", exist_ok=True)
+parser = argparse.ArgumentParser()
+parser.add_argument("--text_eval_results", type=str, required=True, help="Path to input text eval results.json")
+parser.add_argument("--video_eval_results", type=str, required=True, help="Path to input video eval results.json")
+parser.add_argument("--group_output_path", type=str,required=True, help='Group output path')
 
-with open(f"{model}/text/eval_results.json", 'r') as f:
+args = parser.parse_args()
+
+with open(args.text_eval_results, 'r') as f:
     text_results = json.load(f)
 
-with open(f"{model}/video/eval_results.json", 'r') as f:
+with open(args.video_eval_results, 'r') as f:
     video_results = json.load(f)
-    
-fres = open(f"{model}/{TYPE}/{TYPE}score.txt", 'w')
 
 results = {}
 
@@ -30,9 +33,7 @@ for vid in text_results:
     
     score += 1 if results[vid]['overall'] else 0
     
-print(f"{TYPE} Score: ", score/len(results)*100.0)
-fres.write(f"{TYPE} Score: {score/len(results)*100.0}")
-fres.close()
+print(f"Group Score: ", score/len(results)*100.0)
 
-with open(f"{model}/{TYPE}/eval_results.json", 'w') as f:
+with open(args.group_output_path, 'w') as f:
     json.dump(results, f)

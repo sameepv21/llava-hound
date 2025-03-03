@@ -3,9 +3,21 @@ from tqdm import tqdm
 from pprint import pprint
 
 # File paths
-eval_file_path = '/home/cr8dl-user/sameep/evaluation/vinoground/videollama3_stic_video/vinoground/eval_test_official/videollama3_stic_video.jsonl'
-inference_file_path = '/home/cr8dl-user/sameep/evaluation/vinoground/videollama3_stic_video/vinoground/inference_test_official/videollama3_stic_video.jsonl'
-output_file_path = './videollama3_stic_video.jsonl'
+import argparse
+
+# Set up argument parser
+parser = argparse.ArgumentParser()
+parser.add_argument('--eval_file_path', type=str, required=True, help='Path to the evaluation file')
+parser.add_argument('--inference_file_path', type=str, required=True, help='Path to the inference file')
+parser.add_argument('--output_file_path', type=str, required=True, help='Path to the output file')
+
+# Parse the arguments
+args = parser.parse_args()
+
+# Assign the parsed arguments to variables
+eval_file_path = args.eval_file_path
+inference_file_path = args.inference_file_path
+output_file_path = args.output_file_path
 
 # Read eval data as a list
 with open(eval_file_path, 'r') as eval_file:

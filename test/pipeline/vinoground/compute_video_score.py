@@ -1,17 +1,21 @@
-import os
-import sys
 import json
+import argparse
+from tqdm import tqdm
 
-model = "sys.argv[1]"
-TYPE = "video"
-dataset = f"vinoground-{TYPE}"
+# Set up argument parser
+parser = argparse.ArgumentParser()
+parser.add_argument('--input_file_path', type=str, required=True, help='Path to the input JSONL file')
+parser.add_argument('--output_file_path', type=str, required=True, help='Path to the output score file')
 
-f = open(f"/home/cr8dl-user/sameep/Video-LLMs/finetune_all/video-llama3/videollama3_stic_video.jsonl", 'r')
-# fres = open(f"{model}/{TYPE}/{TYPE}score.txt", 'w')
+# Parse the arguments
+args = parser.parse_args()
+
+# Open files using the provided command line arguments
+f = open(args.input_file_path, 'r')
 
 results = {}
 
-for line in f:
+for line in tqdm(f):
     data = json.loads(line)
     vid = data['video_id'].split("/")[-1].split('_')[0] if '_' in data['video_id'].split("/")[-1] else data['video_id'].split("/")[-1]
     
@@ -33,9 +37,7 @@ for vid, result in results.items():
     result['overall'] = first_result and second_result
     score += 1 if result['overall'] else 0
 
-print(f"{TYPE} Score: ", score/len(results)*100.0)
-# fres.write(f"{TYPE} Score: {score/len(results)*100.0}")
-# fres.close()
-    
-# with open(f"{model}/{TYPE}/eval_results.json", 'w') as f:
-#     json.dump(results, f)
+print(f"Video Score: ", score/len(results)*100.0)
+
+with open(args.output_file_path, 'w') as f:
+    json.dump(results, f)
