@@ -1,13 +1,13 @@
-output_model_name=llava-hound-temporal-6k
-model_path=ShareGPTVideo/LLaVA-Hound-SFT
+output_model_name=videollama3_lhdpo
+model_path=DAMO-NLP-SG/VideoLLaMA3-7B
 model_base="None"
-load_peft=/home/cr8dl-user/sameep/experiments/scaled_temporal_infused_dpo_v1
+load_peft=/home/cr8dl-user/sameep/experiments/videollama3_lp_lhdpo
 
 data_name=nextqa
 TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/llava-hound
-TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/llava-hound-temporal-6k
+TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/${data_name}/${output_model_name}
 
-data_path=$TEST_DATA_DIR/temporal_benchmark_sampled.json
+data_path=$TEST_DATA_DIR/nextqa.json
 output_path=$TEST_RESULT_DIR/${data_name}/inference_test_official
 
 cache_dir=/home/cr8dl-user/.cache
