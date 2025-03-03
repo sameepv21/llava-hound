@@ -6,7 +6,7 @@ model = "sys.argv[1]"
 TYPE = "video"
 dataset = f"vinoground-{TYPE}"
 
-f = open(f"/home/cr8dl-user/sameep/Video-LLMs/finetune_all/video-llama3/videollama3_base_video.jsonl", 'r')
+f = open(f"/home/cr8dl-user/sameep/Video-LLMs/finetune_all/video-llama3/videollama3_stic_video.jsonl", 'r')
 # fres = open(f"{model}/{TYPE}/{TYPE}score.txt", 'w')
 
 results = {}

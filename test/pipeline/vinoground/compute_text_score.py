@@ -6,7 +6,7 @@ model = "videollama3_base_text"
 TYPE = "text"
 dataset = f"vinoground-{TYPE}"
 
-f = open(f"/home/cr8dl-user/sameep/Video-LLMs/finetune_all/video-llama3/videollama3_temporal_text.jsonl", 'r')
+f = open(f"/home/cr8dl-user/sameep/Video-LLMs/finetune_all/video-llama3/videollama3_stic_text.jsonl", 'r')
 fres = open(f"{model}_score.txt", 'w')
 
 results = {}

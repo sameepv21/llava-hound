@@ -3,9 +3,9 @@ from tqdm import tqdm
 from pprint import pprint
 
 # File paths
-eval_file_path = '/home/cr8dl-user/sameep/evaluation/vinoground/videollama3_base_video/vinoground/eval_test_official/videollama3_base_video.jsonl'
-inference_file_path = '/home/cr8dl-user/sameep/evaluation/vinoground/videollama3_base_video/vinoground/inference_test_official/videollama3_base_video.jsonl'
-output_file_path = './videollama3_base_video.jsonl'
+eval_file_path = '/home/cr8dl-user/sameep/evaluation/vinoground/videollama3_stic_video/vinoground/eval_test_official/videollama3_stic_video.jsonl'
+inference_file_path = '/home/cr8dl-user/sameep/evaluation/vinoground/videollama3_stic_video/vinoground/inference_test_official/videollama3_stic_video.jsonl'
+output_file_path = './videollama3_stic_video.jsonl'
 
 # Read eval data as a list
 with open(eval_file_path, 'r') as eval_file:
