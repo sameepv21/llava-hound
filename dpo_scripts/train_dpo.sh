@@ -1,5 +1,5 @@
 input_model_name=${1:-"ShareGPTVideo/LLaVA-Hound-SFT"}
-output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/llavahound_stic"}
+output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/llavahound_combined"}
 lr=${3:-"5e-7"}
 
 cache_dir=/home/cr8dl-user/.cache
@@ -10,7 +10,7 @@ export WANDB_PROJECT=llava-hound
 export WANDB_NAME=llava-hound-stic
 
 # gpu_ids=0
-gpu_ids=2,3,4,6,7
+gpu_ids=3,4,5,6,7
 export CUDA_VISIBLE_DEVICES=$gpu_ids
 n_gpu=$(echo $gpu_ids | tr "," "\n" | wc -l)
 echo "Using $n_gpu GPUs: $gpu_ids"
@@ -20,9 +20,9 @@ output_dir=$output_model_name
 mkdir -p $output_dir
 
 # DATA
-data_path=/home/cr8dl-user/sameep/datasets/timewarp/stic_lh_pref.json
+data_path=/home/cr8dl-user/sameep/datasets/timewarp/timewarp_combined_lh_30k_frames.json
 
-video_dir=/home/cr8dl-user/sameep/datasets/timewarp/llava_hound_frames
+video_dir=/home/cr8dl-user/sameep/datasets/timewarp
 image_dir="/"
 
 # sudo chmod +x -R .
