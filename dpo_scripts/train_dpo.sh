@@ -1,4 +1,4 @@
-input_model_name=${1:-"ShareGPTVideo/LLaVA-Hound-SFT"}
+input_model_name=${1:-"OpenGVLab/InternVideo2_5_Chat_8B"}
 output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/llavahound_combined"}
 lr=${3:-"5e-7"}
 
