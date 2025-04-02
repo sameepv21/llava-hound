@@ -1,12 +1,14 @@
 gpustat
 fire
 logzero
-transformers==4.36.2
+transformers==4.40.1
 deepspeed==0.12.2
-tokenizers==0.15.0
+tokenizers==0.19
 sentencepiece==0.1.99
 shortuuid
 accelerate==0.23.0
+torch==2.1.2
+torchvision==0.16.2
 peft==0.5.0
 bitsandbytes==0.41.0
 scikit-learn==1.2.2
@@ -23,4 +25,6 @@ tiktoken
 opencv-python
 multiprocess==0.70.16
 httpx==0.27.0 # Required for openai key for evals
+av
+imageio
 # flash-attn==2.1.1 # use command pip install flash-attn --no-build-isolation
