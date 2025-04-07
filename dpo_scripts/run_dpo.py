@@ -517,8 +517,9 @@ class DPODataset(Dataset):
                 video_folder = self.data_args.video_folder
                 processor = self.data_args.video_processor
                 video = os.path.join(video_folder, video_file)
-                # print(video)
-                video = processor(video, return_tensors='pt')['pixel_values'][0]
+
+                inputs = processor(video, return_tensors='pt')
+                video = inputs['pixel_values']
                 # print(video, 'success')
                 # sources = preprocess_multimodal(make_conversation([e["detail"] for e in sources]), self.data_args)
                 prompt = data_dict['prompt']
@@ -687,11 +688,12 @@ def train(attn_implementation):
         raise NotImplementedError("Quantization is not supported yet.")
     
     if model_args.image_tower is not None or model_args.video_tower is not None:  ###################################################
-        model = LlavaLlamaForCausalLM.from_pretrained(
+        model = transformers.AutoModelForCausalLM.from_pretrained(
             model_args.model_name_or_path,
             cache_dir=training_args.cache_dir,
             attn_implementation=attn_implementation,
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
+            trust_remote_code=True,
         )
 
         model = model.to(device=training_args.device)
@@ -771,39 +773,17 @@ def train(attn_implementation):
             conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
 
     if model_args.image_tower is not None or model_args.video_tower is not None:  #############################
-        if model_args.image_tower is not None:
-            image_tower = model.get_image_tower()
-            if image_tower is None:
-                model.get_model().initialize_image_modules(
-                    model_args=model_args,
-                    fsdp=training_args.fsdp
-                )
-                image_tower = model.get_image_tower()
-            if not image_tower.is_loaded:
-                # print('load image tower')
-                image_tower.load_model()
-            image_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
+        image_tower = transformers.AutoProcessor.from_pretrained(model_args.image_tower, trust_remote_code = True)
+        data_args.image_processor = image_tower
+        data_args.is_multimodal = True
 
-            data_args.image_processor = image_tower.image_processor
-            data_args.is_multimodal = True
-
-            model.config.image_aspect_ratio = data_args.image_aspect_ratio
-            model.config.image_grid_pinpoints = data_args.image_grid_pinpoints
+        model.config.image_aspect_ratio = data_args.image_aspect_ratio
+        model.config.image_grid_pinpoints = data_args.image_grid_pinpoints
 
         if model_args.video_tower is not None:
-            video_tower = model.get_video_tower()
-            if video_tower is None:
-                model.get_model().initialize_video_modules(
-                    model_args=model_args,
-                    fsdp=training_args.fsdp
-                )
-                video_tower = model.get_video_tower()
-            if not video_tower.is_loaded:
-                # print('load video tower')
-                video_tower.load_model()
-            video_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
-
-            data_args.video_processor = video_tower.video_processor
+            video_tower = transformers.AutoProcessor.from_pretrained(model_args.video_tower, trust_remote_code = True)
+        
+            data_args.video_processor = video_tower
             data_args.is_multimodal = True
 
             # model.config.image_aspect_ratio = data_args.image_aspect_ratio

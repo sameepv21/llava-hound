@@ -1,16 +1,16 @@
 input_model_name=${1:-"OpenGVLab/InternVideo2_5_Chat_8B"}
-output_model_name=${2:-"/home/cr8dl-user/sameep/experiments/llavahound_combined"}
+output_model_name=${2:-"/scratch/svani/experiments/internvideo"}
 lr=${3:-"5e-7"}
 
-cache_dir=/home/cr8dl-user/.cache
+cache_dir=/scratch/svani/.cache
 export cache_dir=$cache_dir
 
 # export WANDB_MODE=disabled
-export WANDB_PROJECT=llava-hound
-export WANDB_NAME=llava-hound-stic
+export WANDB_PROJECT=internvideo
+export WANDB_NAME=internvideo_twe
 
 # gpu_ids=0
-gpu_ids=3,4,5,6,7
+gpu_ids=0
 export CUDA_VISIBLE_DEVICES=$gpu_ids
 n_gpu=$(echo $gpu_ids | tr "," "\n" | wc -l)
 echo "Using $n_gpu GPUs: $gpu_ids"
@@ -20,29 +20,29 @@ output_dir=$output_model_name
 mkdir -p $output_dir
 
 # DATA
-data_path=/home/cr8dl-user/sameep/datasets/timewarp/timewarp_combined_lh_30k_frames.json
+data_path=/scratch/svani/timewarp/timewarp_explicit.json
 
-video_dir=/home/cr8dl-user/sameep/datasets/timewarp
+video_dir=/scratch/svani/timewarp
 image_dir="/"
 
 # sudo chmod +x -R .
-export PYTHONPATH="/home/cr8dl-user/arpit/miniforge3/envs/llavahound/bin/python"
+export PYTHONPATH="/home/svani/.conda/envs/internvideo/bin/python"
 rand=$RANDOM
 port=$((19000 + $rand % 1000))
 
 # python -m dpo_scripts.run_dpo \
 torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_dpo \
-    --deepspeed /home/cr8dl-user/sameep/Video-LLMs/llava-hound/zero2.json \
+    --deepspeed /home/svani/Video-LLMs/internvideo/zero2.json \
     --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
     --model_name_or_path $model_name_or_path \
     --dpo_alpha 1.0 --beta 0.1 --gamma 0 \
-    --version v1 \
+    --version internvideo \
     --data_path $data_path \
     --video_folder $video_dir \
     --image_folder $image_dir \
     --X "Image" "Video" --training_modal 'video' \
-    --image_tower LanguageBind/LanguageBind_Image \
-    --video_tower LanguageBind/LanguageBind_Video_merge \
+    --image_tower OpenGVLab/InternVideo2_5_Chat_8B \
+    --video_tower OpenGVLab/InternVideo2_5_Chat_8B \
     --mm_projector_type mlp2x_gelu \
     --mm_vision_select_layer -2 \
     --mm_use_x_start_end False \

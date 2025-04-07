@@ -22,9 +22,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
-from transformers import top_k_top_p_filtering
 
-from .import_utils import is_npu_available, is_xpu_available
+from .import_utils import is_npu_available, is_xpu_available, top_k_top_p_filtering
 
 
 try:

@@ -2,38 +2,57 @@ import json
 import os
 import argparse
 
-parser = argparse.ArgumentParser(description='Infuse data')
-parser.add_argument('--llava_hound_dpo_data', type=str, required=True, help='Path to llava-hound-dpo-data')
-parser.add_argument('--temporal_data', type=str, required=True, help='Path to temporal data')
-parser.add_argument('--temporal_frame_dir_name', type=str, required=True, help='Name of the temporal frame directory')
-parser.add_argument("--save_dir", type=str, required=True, help="Path to save the infused data")
+def merge_preferences(temporal_pref_path, llavahound_pref_path, save_dir):
+    # Load temporal preferences
+    with open(temporal_pref_path, 'r') as f:
+        temporal_data = json.load(f)
+    
+    # Load llavahound preferences
+    with open(llavahound_pref_path, 'r') as f:
+        llavahound_data = [json.loads(line) for line in f]
+    
+    # Prepare the merged data
+    merged_data = []
 
-args = parser.parse_args()
+    # Process temporal preferences
+    for entry in temporal_data:
+        merged_entry = {
+            "id": entry["id"],
+            "video": f"normal_frames/{entry['video']}",
+            "prompt": entry["prompt"],
+            "answer": entry["answer"],
+            "chosen": entry["chosen"],
+            "chosen_score": entry["chosen_score"],
+            "rejected": entry["rejected"],
+            "rejected_score": entry["rejected_score"]
+        }
+        merged_data.append(merged_entry)
 
-llava_hound_dpo_data = args.llava_hound_dpo_data
-temporal_data = args.temporal_data
-temporal_frame_dir_name = args.temporal_frame_dir_name
+    # Process llavahound preferences
+    for entry in llavahound_data:
+        merged_entry = {
+            "id": entry["id"],
+            "video": f"sharegpt4frames/{entry['video']}",
+            "prompt": entry["prompt"],
+            "answer": entry["answer"],
+            "chosen": entry["chosen"],
+            "chosen_score": entry["chosen_score"],
+            "rejected": entry["rejected"],
+            "rejected_score": entry["rejected_score"]
+        }
+        merged_data.append(merged_entry)
 
-with open(temporal_data, "r") as f:
-    data_temporal = json.load(f)
+    # Save the merged data
+    output_path = os.path.join(save_dir, 'timewarp_explicit.json')
+    with open(output_path, 'w') as f:
+        json.dump(merged_data, f, indent=4)
 
-data_lh = []
-with open(llava_hound_dpo_data, "r") as f:
-    for line in f:
-        data_lh.append(json.loads(line))
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Merge preference files into a single JSON.')
+    parser.add_argument('--temporal_pref_path', type=str, help='Path to temporal_pref.json')
+    parser.add_argument('--llavahound_pref_path', type=str, help='Path to llavahound_pref.jsonl')
+    parser.add_argument('--save_dir', type=str, help='Directory to save the merged JSON file')
 
-assert set(data_temporal[0].keys()) == set(data_lh[0].keys()), "Keys do not match for the first input"
+    args = parser.parse_args()
 
-for item in data_temporal:
-    item["video"] = os.path.join(temporal_frame_dir_name, item["video"].removesuffix(".mp4"))
-
-for lh_item in data_lh:
-    lh_item['video'] = os.path.join("train_300k/train_zip", lh_item['video'].removesuffix('.mp4'))
-
-combined_data = data_temporal + data_lh
-
-# Assert statement to check the length of the combined data
-assert len(combined_data) == len(data_temporal) + len(data_lh), "Length of combined data does not match the sum of individual lengths"
-
-with open(os.path.join(args.save_dir, "temporal_infused_good.json"), "w") as f:
-    json.dump(combined_data, f, indent=4)
+    merge_preferences(args.temporal_pref_path, args.llavahound_pref_path, args.save_dir)
