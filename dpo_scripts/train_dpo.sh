@@ -66,7 +66,7 @@ torchrun --nproc_per_node=$n_gpu --master_port=$port -m dpo_scripts.run_dpo \
     --logging_steps 25 \
     --tf32 True \
     --model_max_length 2048 \
-    --gradient_checkpointing True \
+    --gradient_checkpointing False \
     --lazy_preprocess True \
     --cache_dir $cache_dir \
     --report_to wandb 2>&1 | tee ./train.log

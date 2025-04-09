@@ -186,7 +186,8 @@ def find_all_linear_names(model):
             continue
         if isinstance(module, cls):
             names = name.split('.')
-            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+            if len(names[-1]) != 1:
+                lora_module_names.add(names[0] if len(names) == 1 else names[-1])
 
     if 'lm_head' in lora_module_names: # needed for 16-bit
         lora_module_names.remove('lm_head')
@@ -754,6 +755,7 @@ def train(attn_implementation):
         model_max_length=training_args.model_max_length,
         padding_side="right",
         use_fast=False,
+        trust_remote_code = True,
     )
 
     if model_args.version == "v0":
@@ -789,21 +791,23 @@ def train(attn_implementation):
             # model.config.image_aspect_ratio = data_args.image_aspect_ratio
             # model.config.image_grid_pinpoints = data_args.image_grid_pinpoints
 
-        model.config.tune_mm_mlp_adapter = training_args.tune_mm_mlp_adapter = model_args.tune_mm_mlp_adapter
-        if model_args.tune_mm_mlp_adapter:
-            model.requires_grad_(False)
-            for p in model.get_model().mm_projector.parameters():
-                p.requires_grad = True
+        # COMMENTED AS THE MM_PROJECTOR_LAYER IS NOT BEING USED BY INTERNVIDEO2.5
+        # model.config.tune_mm_mlp_adapter = training_args.tune_mm_mlp_adapter = model_args.tune_mm_mlp_adapter
+        # if model_args.tune_mm_mlp_adapter:
+        #     model.requires_grad_(False)
+        #     for p in model.get_model().mm_projector.parameters():
+        #         p.requires_grad = True
 
-        model.config.freeze_mm_mlp_adapter = training_args.freeze_mm_mlp_adapter
-        if training_args.freeze_mm_mlp_adapter:
-            for p in model.get_model().mm_projector.parameters():
-                p.requires_grad = False
+        # model.config.freeze_mm_mlp_adapter = training_args.freeze_mm_mlp_adapter
+        # if training_args.freeze_mm_mlp_adapter:
+        #     for p in model.get_model().mm_projector.parameters():
+        #         p.requires_grad = False
 
         model.config.mm_use_x_start_end = data_args.mm_use_x_start_end = model_args.mm_use_x_start_end
         training_args.use_x_start_end = model_args.mm_use_x_start_end
         model.config.mm_use_x_patch_token = model_args.mm_use_x_patch_token
-        model.initialize_X_tokenizer(model_args, tokenizer=tokenizer)
+        model.config.hidden_size = 4096 # MANUALLY ADD TO THE CONFIG
+        # model.initialize_X_tokenizer(model_args, tokenizer=tokenizer)
 
     ###################
     # for p in model.get_model().layers.parameters():
