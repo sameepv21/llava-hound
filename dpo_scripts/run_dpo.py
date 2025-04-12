@@ -44,6 +44,8 @@ from trl.trainer.utils import DPODataCollatorWithPadding
 from PIL import Image
 
 
+import pdb
+
 local_rank = None
 
 
@@ -514,6 +516,7 @@ class DPODataset(Dataset):
                 has_X = 'image'
 
             elif self.training_modal == 'video':
+                pdb.set_trace()
                 video_file = data_dict['video']
                 video_folder = self.data_args.video_folder
                 processor = self.data_args.video_processor
