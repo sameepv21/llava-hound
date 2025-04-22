@@ -38,16 +38,27 @@ from llava.train.llava_trainer import LLaVADPOTrainer
 from llava import conversation as conversation_lib
 conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
 from llava.model import *
-from llava.mm_utils import tokenizer_X_token
+from llava.mm_utils import tokenizer_X_token, tokenizer_X_token_internvideo
 from trl.trainer.utils import DPODataCollatorWithPadding
 
 from PIL import Image
+import torchvision.transforms as T
+import numpy as np
+from decord import VideoReader, cpu
+from torchvision.transforms.functional import InterpolationMode
 
 
 import pdb
 
 local_rank = None
 
+# Global Vars
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD = (0.229, 0.224, 0.225)
+FPV=10
+IMG_START_TOKEN='<img>'
+IMG_END_TOKEN='</img>'
+IMG_CONTEXT_TOKEN='<IMG_CONTEXT>'
 
 def rank0_print(*args):
     if local_rank == 0:
@@ -283,6 +294,95 @@ def make_conv(prompt, answer):
         },
     ]
 
+def preprocess_internvideo(
+    sources,
+    tokenizer: transformers.PreTrainedTokenizer,
+    X: str = None
+) -> Dict:
+    # pdb.set_trace() # DEBUG BREAKPOINT
+    conv = conversation_lib.default_conversation.copy()
+    roles = {"human": conv.roles[0], "gpt": conv.roles[1]}
+
+    # Apply prompt templates
+    conversations = []
+    for i, source in enumerate(sources):
+        if roles[source[0]["from"]] != conv.roles[0]:
+            # Skip the first one if it is not from human
+            source = source[1:]
+
+        conv.messages = []
+        for j, sentence in enumerate(source):
+            role = roles[sentence["from"]]
+            assert role == conv.roles[j % 2], f"{i}"
+            conv.append_message(role, sentence["value"])
+        conversations.append(conv.get_prompt())
+
+    # import pdb
+    # pdb.set_trace()
+    # Tokenize conversations
+    if X is not None:
+        input_ids = torch.stack([tokenizer_X_token_internvideo(prompt, tokenizer, 92544, return_tensors='pt') for prompt in conversations], dim=0)
+    else:
+        input_ids = tokenizer(
+            conversations,
+            return_tensors="pt",
+            padding="longest",
+            max_length=tokenizer.model_max_length,
+            truncation=True,
+        ).input_ids
+
+    targets = input_ids.clone()
+
+    assert conv.sep_style == conversation_lib.SeparatorStyle.TWO
+
+    # Mask targets
+    sep = conv.sep + conv.roles[1] + ": "
+    for conversation, target in zip(conversations, targets):
+        if tokenizer.pad_token_id == None or tokenizer.pad_token_id != tokenizer.eos_token_id:
+            tokenizer.pad_token_id = tokenizer.eos_token_id
+        total_len = int(target.ne(tokenizer.pad_token_id).sum())
+
+        rounds = conversation.split(conv.sep2)
+        cur_len = 0
+        target[:cur_len] = IGNORE_INDEX
+        for i, rou in enumerate(rounds):
+            if rou == "":
+                break
+
+            parts = rou.split(sep)
+            if len(parts) != 2:
+                break
+            parts[0] += sep
+
+            if X is not None:
+                round_len = len(tokenizer_X_token_internvideo(rou, tokenizer, 92544))
+                instruction_len = len(tokenizer_X_token_internvideo(parts[0], tokenizer, 92544)) - 2
+            else:
+                round_len = len(tokenizer(rou).input_ids)
+                instruction_len = len(tokenizer(parts[0]).input_ids) - 2
+
+            if i != 0 and not tokenizer.legacy and IS_TOKENIZER_GREATER_THAN_0_14:
+                round_len -= 1
+                instruction_len -= 1
+
+            target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
+
+            cur_len += round_len
+        target[cur_len:] = IGNORE_INDEX
+
+        if cur_len < tokenizer.model_max_length:
+            if cur_len != total_len:
+                target[:] = IGNORE_INDEX
+                print(
+                    f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
+                    f" (ignored)"
+                )
+
+    return dict(
+        input_ids=input_ids,
+        labels=targets,
+    )
+
 def preprocess_v1(
     sources,
     tokenizer: transformers.PreTrainedTokenizer,
@@ -410,6 +510,8 @@ def preprocess(
         return preprocess_plain(sources, tokenizer, X=X)
     elif conversation_lib.default_conversation.version.startswith("v1"):
         return preprocess_v1(sources, tokenizer, X=X)
+    elif conversation_lib.default_conversation.version.startswith("internvideo"):
+        return preprocess_internvideo(sources, tokenizer, X=X)
     else:
         raise NotImplementedError
 
@@ -431,6 +533,104 @@ def load_data(data_args):
     else: 
         data_list = load_json(data_args.data_path)
     return data_list
+
+
+
+
+
+
+
+
+
+
+
+
+# CUSTOM FUNCTIONS FOR LOADING AND PREPROCESSING VIDEOS FOR INTERNVIDEO2.5
+def build_transform(input_size):
+    MEAN, STD = IMAGENET_MEAN, IMAGENET_STD
+    transform = T.Compose([T.Lambda(lambda img: img.convert("RGB") if img.mode != "RGB" else img), T.Resize((input_size, input_size), interpolation=InterpolationMode.BICUBIC), T.ToTensor(), T.Normalize(mean=MEAN, std=STD)])
+    return transform
+
+def find_closest_aspect_ratio(aspect_ratio, target_ratios, width, height, image_size):
+    best_ratio_diff = float("inf")
+    best_ratio = (1, 1)
+    area = width * height
+    for ratio in target_ratios:
+        target_aspect_ratio = ratio[0] / ratio[1]
+        ratio_diff = abs(aspect_ratio - target_aspect_ratio)
+        if ratio_diff < best_ratio_diff:
+            best_ratio_diff = ratio_diff
+            best_ratio = ratio
+        elif ratio_diff == best_ratio_diff:
+            if area > 0.5 * image_size * image_size * ratio[0] * ratio[1]:
+                best_ratio = ratio
+    return best_ratio
+
+def dynamic_preprocess(image, min_num=1, max_num=6, image_size=448, use_thumbnail=False):
+    orig_width, orig_height = image.size
+    aspect_ratio = orig_width / orig_height
+
+    # calculate the existing image aspect ratio
+    target_ratios = set((i, j) for n in range(min_num, max_num + 1) for i in range(1, n + 1) for j in range(1, n + 1) if i * j <= max_num and i * j >= min_num)
+    target_ratios = sorted(target_ratios, key=lambda x: x[0] * x[1])
+
+    # find the closest aspect ratio to the target
+    target_aspect_ratio = find_closest_aspect_ratio(aspect_ratio, target_ratios, orig_width, orig_height, image_size)
+
+    # calculate the target width and height
+    target_width = image_size * target_aspect_ratio[0]
+    target_height = image_size * target_aspect_ratio[1]
+    blocks = target_aspect_ratio[0] * target_aspect_ratio[1]
+
+    # resize the image
+    resized_img = image.resize((target_width, target_height))
+    processed_images = []
+    for i in range(blocks):
+        box = ((i % (target_width // image_size)) * image_size, (i // (target_width // image_size)) * image_size, ((i % (target_width // image_size)) + 1) * image_size, ((i // (target_width // image_size)) + 1) * image_size)
+        # split the image
+        split_img = resized_img.crop(box)
+        processed_images.append(split_img)
+    assert len(processed_images) == blocks
+    if use_thumbnail and len(processed_images) != 1:
+        thumbnail_img = image.resize((image_size, image_size))
+        processed_images.append(thumbnail_img)
+    return processed_images
+
+def load_video(video_path, input_size=448, max_num=1):
+    transform = build_transform(input_size=input_size)
+    pixel_values_list, num_patches_list = [], []
+    frame_count = 0
+
+    for frame in os.listdir(video_path):
+        if frame_count == FPV:
+            break
+        frame_count += 1
+        frame_path = os.path.join(video_path, frame)
+        img = Image.open(frame_path).convert("RGB")
+        img = dynamic_preprocess(img, image_size=input_size, use_thumbnail=True, max_num=max_num)
+        pixel_values = [transform(tile) for tile in img]
+        pixel_values = torch.stack(pixel_values)
+        num_patches_list.append(pixel_values.shape[0])
+        pixel_values_list.append(pixel_values)
+    pixel_values = torch.cat(pixel_values_list)
+    return pixel_values, num_patches_list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class DPODataset(Dataset):
     """Dataset for supervised fine-tuning."""
@@ -516,19 +716,17 @@ class DPODataset(Dataset):
                 has_X = 'image'
 
             elif self.training_modal == 'video':
-                pdb.set_trace()
+                # Preprocess and load video
                 video_file = data_dict['video']
                 video_folder = self.data_args.video_folder
-                processor = self.data_args.video_processor
-                video = os.path.join(video_folder, video_file)
-
-                inputs = processor(video, return_tensors='pt')
-                video = inputs['pixel_values']
-                # print(video, 'success')
-                # sources = preprocess_multimodal(make_conversation([e["detail"] for e in sources]), self.data_args)
+                video_path = os.path.join(video_folder, video_file)
+                video, num_patches_list = load_video(video_path, max_num=1) # Returns the pixel values and num_patches_list
+                
+                # Preprocess and load prompt
+                video_prefix = "".join([f"Frame{i+1}: <image>\n" for i in range(len(num_patches_list))])
                 prompt = data_dict['prompt']
+                prompt = video_prefix + prompt
                 prompt = prompt.replace("<video>", "").strip()
-                prompt = "<video>\n" + prompt
                 data_dict['prompt'] = prompt
                 has_X = 'video'
             else:
@@ -616,7 +814,7 @@ class DPODataCollator(DPODataCollatorWithPadding):
             the sum of the length of the prompt and the chosen/rejected response, with
             label_pad_token_id  for the prompt tokens.
         """
-        # import pdb; pdb.set_trace()
+
         batch = {}
         
         chosen_sources = make_conv(prompt, chosen)
@@ -760,6 +958,9 @@ def train(attn_implementation):
         use_fast=False,
         trust_remote_code = True,
     )
+
+    img_context_token_id = tokenizer.convert_tokens_to_ids(IMG_CONTEXT_TOKEN)
+    model.img_context_token_id = img_context_token_id
 
     if model_args.version == "v0":
         if tokenizer.pad_token is None:

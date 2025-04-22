@@ -8,7 +8,7 @@ from transformers import AutoModel, AutoTokenizer
 import os
 
 # Global vars
-FPV=8
+FPV=10
 IMG_START_TOKEN='<img>'
 IMG_END_TOKEN='</img>'
 IMG_CONTEXT_TOKEN='<IMG_CONTEXT>'

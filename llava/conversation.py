@@ -357,6 +357,19 @@ conv_llava_v1_mmtag = Conversation(
     version="v1_mmtag",
 )
 
+
+# Internvideo
+conv_internvideo = Conversation(
+    system="你是书生·万象，英文名是InternVL，是由上海人工智能实验室、清华大学及多家合作单位联合开发的多模态大语言模型。",
+    roles=("USER", "ASSISTANT"),
+    version="internvideo",
+    messages=(),
+    offset=0,
+    sep_style=SeparatorStyle.TWO,
+    sep=" ",
+    sep2="</s>",
+)
+
 default_conversation = conv_vicuna_v0
 conv_templates = {
     "default": conv_vicuna_v0,
@@ -364,6 +377,7 @@ conv_templates = {
     "v1": conv_vicuna_v1,
     "vicuna_v1": conv_vicuna_v1,
     "llama_2": conv_llama_2,
+    "internvideo": conv_internvideo,
 
     "plain": conv_llava_plain,
     "v0_plain": conv_llava_plain,

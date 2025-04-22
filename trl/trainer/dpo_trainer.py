@@ -839,6 +839,7 @@ class DPOTrainer(Trainer):
             batch['images'][0] * 2,
             batch['images'][1] * 2                                
         ]
+        
         concatenated_batch['concatenated_images'] = repeated_list
         return concatenated_batch
 
@@ -991,12 +992,11 @@ class DPOTrainer(Trainer):
         len_chosen = batch["chosen_labels"].shape[0]
 
         all_logits, new_labels = model(
-            concatenated_batch["concatenated_input_ids"],
+            input_ids=concatenated_batch["concatenated_input_ids"],
             attention_mask=concatenated_batch["concatenated_attention_mask"],
             labels=concatenated_batch["concatenated_labels"],
-            images=concatenated_batch["concatenated_images"],
+            pixel_values=torch.cat(concatenated_batch["concatenated_images"][0]),
             use_cache=False,
-            dpo_forward=True,
         )
         all_logits = all_logits.to(torch.float32)
         all_logps = self.get_batch_logps(
