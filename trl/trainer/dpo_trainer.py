@@ -836,8 +836,8 @@ class DPOTrainer(Trainer):
                 batch["prompt_attention_mask"].repeat(2, 1).to(device=device)
             )
         repeated_list = [
-            batch['images'][0] * 2,
-            batch['images'][1] * 2                                
+            batch['images'][0] * 2, # Don't need the repeated list because the image context tokens are the same.
+            batch['images'][1] * 2                             
         ]
         
         concatenated_batch['concatenated_images'] = repeated_list
@@ -991,13 +991,17 @@ class DPOTrainer(Trainer):
         )
         len_chosen = batch["chosen_labels"].shape[0]
 
-        all_logits, new_labels = model(
+        outputs = model(
             input_ids=concatenated_batch["concatenated_input_ids"],
             attention_mask=concatenated_batch["concatenated_attention_mask"],
             labels=concatenated_batch["concatenated_labels"],
             pixel_values=torch.cat(concatenated_batch["concatenated_images"][0]),
             use_cache=False,
         )
+
+        all_logits = outputs.logits
+        new_labels = concatenated_batch['concatenated_labels'] # Same as the old one
+
         all_logits = all_logits.to(torch.float32)
         all_logps = self.get_batch_logps(
             all_logits,
