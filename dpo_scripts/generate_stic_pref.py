@@ -9,7 +9,7 @@ from PIL import Image
 
 import torch
 from tqdm import tqdm
-from transformers import AutoProcessor, AutoModelForCausalLM
+from transformers import AutoModel, AutoTokenizer
 
 FPV=10
 IMG_START_TOKEN='<img>'
@@ -176,7 +176,7 @@ if __name__ == "__main__":
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True)
     
-    model = AutoModelForCausalLM.from_pretrained(
+    model = AutoModel.from_pretrained(
         args.model_path,
         trust_remote_code=True,
         device_map={"": "cuda"},
@@ -191,10 +191,10 @@ if __name__ == "__main__":
 
     response_dicts = []
 
-    with open('/home/cr8dl-user/sameep/datasets/llava-hound/sft_dpo_17k.jsonl', 'r') as f:
+    with open('/scratch/svani/timewarp/pref_sharegpt4video.jsonl', 'r') as f:
         video_data = [json.loads(line) for line in f]
     
-    with open('/home/cr8dl-user/sameep/datasets/timewarp/stic_lh_pref.json', 'r') as f:
+    with open('/scratch/svani/timewarp_sameep_backup/json_files/stic_lh_pref.json', 'r') as f:
         frame_corruption_data = json.load(f)
 
     for idx, video_info in tqdm(enumerate(video_data)):
