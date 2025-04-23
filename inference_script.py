@@ -133,7 +133,7 @@ with torch.no_grad():
         query = query.replace("<image>", image_tokens, 1)
     
     model_inputs = tokenizer(query, return_tensors='pt')
-    input_ids = model_inputs[b'input_ids'].to(model.device)
+    input_ids = model_inputs['input_ids'].to(model.device)
     attention_mask = model_inputs['attention_mask'].to(model.device)
     generation_config['eos_token_id'] = eos_token_id
     generation_output = model.generate(

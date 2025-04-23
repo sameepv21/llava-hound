@@ -10,6 +10,8 @@ from PIL import Image
 import torch
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
+from torchvision.transforms.functional import InterpolationMode
+import torchvision.transforms as T
 
 FPV=10
 IMG_START_TOKEN='<img>'
@@ -54,30 +56,49 @@ def eval_model(args, model_dict):
     modal_type = args.modal_type 
     query = args.query
 
-    conversation = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "video", "video": {"video_path": os.path.join(args.video_dir, args.video_file), "fps": 1, "max_frames": 180}},
-                {"type": "text", "text": query},
-            ]
-        },
-    ]
+    with torch.no_grad():
+        pixel_values, num_patches_list = load_video(
+            video_path=os.path.join(args.video_dir, args.video_file),
+            max_num=1,
+        )
+        pixel_values = pixel_values.to(torch.bfloat16).to(model.device)
+        video_prefix = "".join([f"Frame{i+1}: <image>\n" for i in range(len(num_patches_list))])
 
-    inputs = processor(
-        conversation=conversation,
-        return_tensors='pt',
-    )[1].to("cuda")
+        query = video_prefix + query
 
-    inputs["eval"] = True
+        if num_patches_list is None:
+            num_patches_list = [pixel_values.shape[0]] if pixel_values is not None else []
+        assert pixel_values is None or len(pixel_values) == sum(num_patches_list)
 
-    if "pixel_values" in inputs:
-        inputs["pixel_values"] = inputs["pixel_values"].to(torch.bfloat16)
-    # output_ids = model(
-    #     input_ids=inputs.
-    # )
-    output_ids = model.generate(**inputs, max_new_tokens=1024)
-    response = processor.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
+        img_context_token_id = tokenizer.convert_tokens_to_ids(IMG_CONTEXT_TOKEN)
+        model.img_context_token_id = img_context_token_id
+
+        template = model.conv_template
+        template.system_message = model.system_message
+        eos_token_id = tokenizer.convert_tokens_to_ids(template.sep.strip())
+        
+        template.append_message(template.roles[0], query)
+        template.append_message(template.roles[1], None)
+        query = template.get_prompt()
+
+        for num_patches in num_patches_list:
+            image_tokens = IMG_START_TOKEN + IMG_CONTEXT_TOKEN * model.num_image_token * num_patches + IMG_END_TOKEN
+            query = query.replace("<image>", image_tokens, 1)
+        
+        model_inputs = tokenizer(query, return_tensors='pt')
+        input_ids = model_inputs['input_ids'].to(model.device)
+        attention_mask = model_inputs['attention_mask'].to(model.device)
+        generation_config['eos_token_id'] = eos_token_id
+        generation_output = model.generate(
+            pixel_values=pixel_values,
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            **generation_config
+        )
+
+        response = tokenizer.batch_decode(generation_output, skip_special_tokens=True)[0]
+        response = response.split(template.sep.strip())[0].strip()
+
     return response
 
 def build_transform(input_size):
