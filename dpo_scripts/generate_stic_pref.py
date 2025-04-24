@@ -56,50 +56,55 @@ def eval_model(args, model_dict):
     modal_type = args.modal_type 
     query = args.query
 
-    with torch.no_grad():
-        pixel_values, num_patches_list = load_video(
-            video_path=os.path.join(args.video_dir, args.video_file),
-            max_num=1,
-        )
-        pixel_values = pixel_values.to(torch.bfloat16).to(model.device)
-        video_prefix = "".join([f"Frame{i+1}: <image>\n" for i in range(len(num_patches_list))])
+    try:
+        with torch.no_grad():
+            pixel_values, num_patches_list = load_video(
+                video_path=os.path.join(args.video_dir, args.video_file),
+                max_num=1,
+            )
+            pixel_values = pixel_values.to(torch.bfloat16).to(model.device)
+            video_prefix = "".join([f"Frame{i+1}: <image>\n" for i in range(len(num_patches_list))])
 
-        query = video_prefix + query
+            query = video_prefix + query
 
-        if num_patches_list is None:
-            num_patches_list = [pixel_values.shape[0]] if pixel_values is not None else []
-        assert pixel_values is None or len(pixel_values) == sum(num_patches_list)
+            if num_patches_list is None:
+                num_patches_list = [pixel_values.shape[0]] if pixel_values is not None else []
+            assert pixel_values is None or len(pixel_values) == sum(num_patches_list)
 
-        img_context_token_id = tokenizer.convert_tokens_to_ids(IMG_CONTEXT_TOKEN)
-        model.img_context_token_id = img_context_token_id
+            img_context_token_id = tokenizer.convert_tokens_to_ids(IMG_CONTEXT_TOKEN)
+            model.img_context_token_id = img_context_token_id
 
-        template = model.conv_template
-        template.system_message = model.system_message
-        eos_token_id = tokenizer.convert_tokens_to_ids(template.sep.strip())
-        
-        template.append_message(template.roles[0], query)
-        template.append_message(template.roles[1], None)
-        query = template.get_prompt()
+            template = model.conv_template
+            template.system_message = model.system_message
+            eos_token_id = tokenizer.convert_tokens_to_ids(template.sep.strip())
+            
+            template.append_message(template.roles[0], query)
+            template.append_message(template.roles[1], None)
+            query = template.get_prompt()
 
-        for num_patches in num_patches_list:
-            image_tokens = IMG_START_TOKEN + IMG_CONTEXT_TOKEN * model.num_image_token * num_patches + IMG_END_TOKEN
-            query = query.replace("<image>", image_tokens, 1)
-        
-        model_inputs = tokenizer(query, return_tensors='pt')
-        input_ids = model_inputs['input_ids'].to(model.device)
-        attention_mask = model_inputs['attention_mask'].to(model.device)
-        generation_config['eos_token_id'] = eos_token_id
-        generation_output = model.generate(
-            pixel_values=pixel_values,
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            **generation_config
-        )
+            for num_patches in num_patches_list:
+                image_tokens = IMG_START_TOKEN + IMG_CONTEXT_TOKEN * model.num_image_token * num_patches + IMG_END_TOKEN
+                query = query.replace("<image>", image_tokens, 1)
+            
+            model_inputs = tokenizer(query, return_tensors='pt')
+            input_ids = model_inputs['input_ids'].to(model.device)
+            attention_mask = model_inputs['attention_mask'].to(model.device)
+            generation_config['eos_token_id'] = eos_token_id
+            generation_output = model.generate(
+                pixel_values=pixel_values,
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                **generation_config
+            )
 
-        response = tokenizer.batch_decode(generation_output, skip_special_tokens=True)[0]
-        response = response.split(template.sep.strip())[0].strip()
+            response = tokenizer.batch_decode(generation_output, skip_special_tokens=True)[0]
+            response = response.split(template.sep.strip())[0].strip()
 
-    return response
+        return response
+    except Exception as e:
+        print(str(e))
+        with open("./error_log.txt", "a") as f:
+            f.write(os.path.join(args.video_dir, args.video_file) + "\n")
 
 def build_transform(input_size):
     MEAN, STD = IMAGENET_MEAN, IMAGENET_STD
