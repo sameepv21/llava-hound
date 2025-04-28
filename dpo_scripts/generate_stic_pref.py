@@ -71,13 +71,14 @@ def eval_model(args, model_dict):
                 num_patches_list = [pixel_values.shape[0]] if pixel_values is not None else []
             assert pixel_values is None or len(pixel_values) == sum(num_patches_list)
 
-            img_context_token_id = tokenizer.convert_tokens_to_ids(IMG_CONTEXT_TOKEN)
-            model.img_context_token_id = img_context_token_id
+            # Clear the template to avoid incrementing
+            model.conv_template.messages.clear()
+            torch.cuda.empty_cache()
 
             template = model.conv_template
             template.system_message = model.system_message
             eos_token_id = tokenizer.convert_tokens_to_ids(template.sep.strip())
-            
+
             template.append_message(template.roles[0], query)
             template.append_message(template.roles[1], None)
             query = template.get_prompt()
@@ -100,6 +101,10 @@ def eval_model(args, model_dict):
             response = tokenizer.batch_decode(generation_output, skip_special_tokens=True)[0]
             response = response.split(template.sep.strip())[0].strip()
 
+            # Clear the memory
+            generation_output = generation_output.cpu()
+            del generation_output, template
+            torch.cuda.empty_cache()
         return response
     except Exception as e:
         print(str(e))
@@ -191,7 +196,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default='OpenGVLab/InternVideo2_5_Chat_8B')
     parser.add_argument("--video_dir", type=str, default="/scratch/svani/timewarp/sharegpt4frames")
-    parser.add_argument("--save_dir", type=str, default="/scratch/svani/timewarp/stic_ivl_pref.json")
+    parser.add_argument("--save_dir", type=str, default="/scratch/mpatel57/internvideo_experiments/stic_ivl_pref.json")
     parser.add_argument("--video_file", type=str, default=None)
     parser.add_argument("--query", type=str, default="Describe the Video.")
     parser.add_argument("--temperature", type=float, default=0.0)
@@ -209,6 +214,9 @@ if __name__ == "__main__":
         torch_dtype=torch.bfloat16,
         attn_implementation="flash_attention_2",
     )
+
+    img_context_token_id = tokenizer.convert_tokens_to_ids(IMG_CONTEXT_TOKEN)
+    model.img_context_token_id = img_context_token_id
 
     model_dict = {
         "tokenizer": tokenizer,
