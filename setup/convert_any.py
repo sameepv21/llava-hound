@@ -39,14 +39,15 @@ def main():
     
     for video_file in tqdm(video_files):
         video_path = os.path.join(args.input_dir, video_file)
-        video_id = os.path.splitext(video_file)[0]  # Extracting video_id from the file name
-        output_dir = os.path.join(args.output_dir, video_id)
-        os.makedirs(output_dir, exist_ok=True)
-        null_frames_ind = sample_frames(video_path, output_dir)
-        if null_frames_ind > 3:
-            print(video_file)
-            break
-        null_frames += null_frames_ind
+        if video_file.endswith(".mp4"):
+            video_id = os.path.splitext(video_file)[0]  # Extracting video_id from the file name
+            output_dir = os.path.join(args.output_dir, video_id)
+            os.makedirs(output_dir, exist_ok=True)
+            null_frames_ind = sample_frames(video_path, output_dir)
+            if null_frames_ind > 3:
+                print(video_file)
+                break
+            null_frames += null_frames_ind
 
 if __name__ == '__main__':
     main()

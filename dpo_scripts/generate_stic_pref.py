@@ -196,7 +196,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default='OpenGVLab/InternVideo2_5_Chat_8B')
     parser.add_argument("--video_dir", type=str, default="/scratch/svani/timewarp/sharegpt4frames")
-    parser.add_argument("--save_dir", type=str, default="/scratch/mpatel57/internvideo_experiments/stic_ivl_pref.json")
+    parser.add_argument("--save_dir", type=str, default="/scratch/svani/timewarp/stic_ivl_pref.json")
     parser.add_argument("--video_file", type=str, default=None)
     parser.add_argument("--query", type=str, default="Describe the Video.")
     parser.add_argument("--temperature", type=float, default=0.0)
