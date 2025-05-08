@@ -16,3 +16,8 @@ DEFAULT_X_START_TOKEN = {'IMAGE': "<im_start>", 'VIDEO': "<vi_start>", 'AUDIO': 
 # DEFAULT_IM_START_TOKEN = "<im_start>"
 DEFAULT_X_END_TOKEN = {'IMAGE': "<im_end>", 'VIDEO': "<vi_end>", 'AUDIO': "<au_end>", 'THERMAL': "<th_end>", 'DEPTH': "<de_end>"}
 # DEFAULT_IM_END_TOKEN = "<im_end>"
+
+FPV=10
+IMG_START_TOKEN='<img>'
+IMG_END_TOKEN='</img>'
+IMG_CONTEXT_TOKEN='<IMG_CONTEXT>'
