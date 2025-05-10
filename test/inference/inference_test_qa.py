@@ -14,8 +14,10 @@ from llava.model.builder import load_pretrained_model
 from llava.mm_utils import get_model_name_from_path
 from data_processing.utils import load_json_data, save_jsonl, save_json
 from inference.inference import model_function, split_list, get_chunk, get_ranged_data, inference_data_list, remove_special_tokens
-from transformers import CLIPImageProcessor
+from transformers import CLIPImageProcessor, AutoModel, AutoTokenizer
 from PIL import Image
+from trl.import_utils import build_transform, find_closest_aspect_ratio, dynamic_preprocess, load_video
+from llava.constants import IMG_START_TOKEN, IMG_END_TOKEN, IMG_CONTEXT_TOKEN, FPV
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -65,8 +67,20 @@ def main(model_path, base_model_path, data_path, output_dir, output_name, chunk_
 
     model_name = get_model_name_from_path(model_path)
     logger.info(f"model {model_name}")
-    tokenizer, model, processor, context_len = load_pretrained_model(model_path, base_model_path, model_name, device_map={"":0})
     
+    model = AutoModel.from_pretrained(
+                model_path,
+                trust_remote_code=True,
+                device_map={"": "cuda"},
+                torch_dtype=torch.bfloat16,
+                attn_implementation="flash_attention_2",
+            )
+    
+    tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+    
+    img_context_token_id = tokenizer.convert_tokens_to_ids(IMG_CONTEXT_TOKEN)
+    model.img_context_token_id = img_context_token_id
+
     if peft_path:
         model.load_adapter(peft_path)
         print(f"Loaded adapters from {peft_path}")
@@ -74,8 +88,8 @@ def main(model_path, base_model_path, data_path, output_dir, output_name, chunk_
     model_dict = {
         "tokenizer": tokenizer,
         "model": model,
-        "processor": processor,
-        "context_len": context_len,
+        # "processor": processor,
+        # "context_len": context_len,
     }
 
     output_path = f"{output_dir}/{output_name}"

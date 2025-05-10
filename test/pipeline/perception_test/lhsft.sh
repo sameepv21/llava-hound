@@ -1,17 +1,17 @@
-output_model_name=llava-hound-sft
-model_path=ShareGPTVideo/LLaVA-Hound-SFT
+output_model_name=internvideo_sft
+model_path=OpenGVLab/InternVideo2_5_Chat_8B
 model_base="None"
 load_peft="None"
 
-TEST_DATA_DIR=/home/cr8dl-user/sameep/datasets/perceptiontest
-TEST_RESULT_DIR=/home/cr8dl-user/sameep/evaluation/verify
+TEST_DATA_DIR=/scratch/svani/benchmarks/ptest
+TEST_RESULT_DIR=/scratch/svani/evaluation
 
 data_name=perceptiontest
-data_path=$TEST_DATA_DIR/llava_hound_valid.json
+data_path=$TEST_DATA_DIR/annotation.json
 output_path=$TEST_RESULT_DIR/perceptiontest/inference_test_official
 
-cache_dir=/home/cr8dl-user/.cache
-VIDEO_DATA_DIR=/home/cr8dl-user/sameep/datasets/perceptiontest/frames
+cache_dir=/scratch/svani/.cache
+VIDEO_DATA_DIR=/scratch/svani/benchmarks/ptest
 
 bash test/inference/inference_test_qa.sh \
 $data_path \

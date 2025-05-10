@@ -13,12 +13,21 @@
 # limitations under the License.
 import importlib
 import sys
+import torch
 from torch import Tensor
+from torchvision.transforms.functional import InterpolationMode
+import torchvision.transforms as T
+import os
+from llava.constants import FPV, IMG_START_TOKEN, IMG_END_TOKEN, IMG_CONTEXT_TOKEN
+from PIL import Image
 
 if sys.version_info < (3, 8):
     _is_python_greater_3_8 = False
 else:
     _is_python_greater_3_8 = True
+
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD = (0.229, 0.224, 0.225)
 
 def top_k_top_p_filtering(
     logits: Tensor,

@@ -8,7 +8,7 @@ from tqdm import tqdm
 import fire
 import re
 from logzero import logger
-from data_processing.utils import format_docstring, load_json_data, save_jsonl, save_json, get_id_from_frame_path
+from data_processing.utils import format_docstring, load_json_data, save_jsonl, save_json
 
 from inference.chatgpt_inference import chatgpt_inference
 

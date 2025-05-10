@@ -25,6 +25,9 @@ from llava.constants import IMG_START_TOKEN, IMG_END_TOKEN, IMG_CONTEXT_TOKEN, F
 from transformers import CLIPImageProcessor
 from PIL import Image
 
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD = (0.229, 0.224, 0.225)
+
 def get_id_from_path(path):
     return path.split('/')[-1].split('.')[0]
 
@@ -57,20 +60,13 @@ def model_function(model_dict, input_data):
     # unpack model dict
     tokenizer = model_dict["tokenizer"]
     model = model_dict["model"]
-    processor = model_dict["processor"]
-    video_processor = processor.get('video', None)
-    image_processor = processor.get('image', None)
-    context_len = model_dict["context_len"]
+    # processor = model_dict["processor"]
+    # video_processor = processor.get('video', None)
+    # image_processor = processor.get('image', None)
+    # context_len = model_dict["context_len"]
     modal_type = input_data.get('modal_type', 'VIDEO').upper()
 
     qs = remove_special_tokens(input_data['query'])
-
-    # Based on the actual running of model, decide whether to keep it or not.
-    if model.config.mm_use_x_start_end:
-        qs = DEFAULT_X_START_TOKEN[modal_type] + DEFAULT_X_TOKEN[modal_type] + DEFAULT_X_END_TOKEN[modal_type] + '\n' + qs
-    else:
-        qs = DEFAULT_X_TOKEN[modal_type] + '\n' + qs
-    # print(qs)
 
     with torch.no_grad():
         pixel_values, num_patches_list = load_video(
@@ -80,7 +76,7 @@ def model_function(model_dict, input_data):
         pixel_values = pixel_values.to(torch.bfloat16).to(model.device)
         video_prefix = "".join([f"Frame{i+1}: <image>\n" for i in range(len(num_patches_list))])
 
-        query = video_prefix + query
+        query = video_prefix + qs
 
         if num_patches_list is None:
             num_patches_list = [pixel_values.shape[0]] if pixel_values is not None else []
