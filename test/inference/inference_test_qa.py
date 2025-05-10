@@ -14,8 +14,6 @@ from llava.model.builder import load_pretrained_model
 from llava.mm_utils import get_model_name_from_path
 from data_processing.utils import load_json_data, save_jsonl, save_json
 from inference.inference import model_function, split_list, get_chunk, get_ranged_data, inference_data_list, remove_special_tokens
-from trl.import_utils import build_transform, find_closest_aspect_ratio, dynamic_preprocess, load_video
-from llava.constants import IMG_START_TOKEN, IMG_END_TOKEN, IMG_CONTEXT_TOKEN, FPV
 from transformers import CLIPImageProcessor
 from PIL import Image
 
