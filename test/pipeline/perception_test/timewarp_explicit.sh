@@ -13,13 +13,13 @@ output_path=$TEST_RESULT_DIR/perceptiontest/inference_test_official
 cache_dir=/scratch/svani/.cache
 VIDEO_DATA_DIR=/scratch/svani/benchmarks/ptest
 
-# bash test/inference/inference_test_qa.sh \
-# $data_path \
-# $output_path/${output_model_name} \
-# $model_path \
-# $model_base \
-# $load_peft \
-# $cache_dir \
-# $VIDEO_DATA_DIR
+bash test/inference/inference_test_qa.sh \
+$data_path \
+$output_path/${output_model_name} \
+$model_path \
+$model_base \
+$load_peft \
+$cache_dir \
+$VIDEO_DATA_DIR
 
 bash test/eval/eval_official_zeroshot_qa.sh $output_path/${output_model_name}.jsonl ${TEST_RESULT_DIR}/${data_name}/eval_test_official

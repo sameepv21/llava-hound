@@ -15,7 +15,7 @@ scikit-learn==1.2.2
 einops==0.6.1
 einops-exts==0.0.4
 timm==0.6.13
-openai==1.4.0
+openai
 decord==0.6.0
 matplotlib
 pytorchvideo==0.1.5

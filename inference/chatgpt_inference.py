@@ -54,9 +54,9 @@ def openai_generate(model_name, prompt, system_prompt=None, **kwargs):
         "role": "user",
         "content": prompt
     })
-    print('\n\n')
-    print("messages: ", messages)
-    print('\n\n')
+    # print('\n\n')
+    # print("messages: ", messages)
+    # print('\n\n')
 
     chat_completion = client.chat.completions.create(
         model=model_name,
@@ -188,5 +188,3 @@ def chatgpt_inference(data, prompt_template, output_dir, output_path, num_tasks=
             clean_output_dir(files)
         except Exception as e:
             print(f"Error: {e}")
-
-
