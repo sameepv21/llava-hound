@@ -1,4 +1,4 @@
-output_model_name=internvideo_sft_cm
+output_model_name=internvideo_dpo_cm
 model_path=OpenGVLab/InternVideo2_5_Chat_8B
 model_base="None"
 load_peft=/scratch/svani/experiments/internvideo_lhdpo

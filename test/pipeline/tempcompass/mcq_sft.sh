@@ -1,13 +1,13 @@
-output_model_name=internvideo_te_cm
+output_model_name=internvideo_sft_mcq
 model_path=OpenGVLab/InternVideo2_5_Chat_8B
 model_base="None"
-load_peft=/scratch/svani/experiments/internvideo
+load_peft="None"
 
 TEST_DATA_DIR=/scratch/svani/benchmarks/tempcompass
 TEST_RESULT_DIR=/scratch/svani/evaluation
 
 data_name=tempcompass
-data_path=$TEST_DATA_DIR/cap_match.json
+data_path=$TEST_DATA_DIR/mcq.json
 output_path=$TEST_RESULT_DIR/tempcompass/inference_test_official
 
 cache_dir=/scratch/svani/.cache
