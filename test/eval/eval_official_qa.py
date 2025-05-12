@@ -175,7 +175,7 @@ def main(pred_path, output_dir, output_path, num_tasks=1, model_name='chatgpt-3.
         'result': f"{accuracy*100:.2f}/{average_score:.2f}",
         'name_or_path': output_path, 
     }
-    save_jsonl(RESULTING_PATH, resulting_dict, append=True)
+    save_jsonl(RESULTING_PATH, resulting_dict)
 
 if __name__ == "__main__":
     fire.Fire(main)
